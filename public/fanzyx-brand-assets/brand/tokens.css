@@ -1,0 +1,18 @@
+:root {
+  /* FanzyX core */
+  --fx-violet: #6929FC;
+  --fx-magenta: #FD23A7;
+  --fx-blue: #4340FA;
+  --fx-pink: #FD5CC9;
+
+  /* Neutrals */
+  --fx-ink: #0A0814;
+  --fx-surface: #141026;
+  --fx-line: #2A2140;
+  --fx-white: #FFFFFF;
+
+  /* Gradients */
+  --fx-gradient-brand: linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%);
+  --fx-gradient-accent: linear-gradient(135deg, #6929FC 0%, #FD5CC9 100%);
+  --fx-glow: radial-gradient(circle at 20% 10%, rgba(105,41,252,.55) 0%, transparent 60%);
+}

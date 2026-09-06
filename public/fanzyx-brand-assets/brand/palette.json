@@ -1,0 +1,64 @@
+{
+  "brand": "FanzyX",
+  "core": {
+    "violet": {
+      "hex": "#6929FC",
+      "rgb": [
+        105,
+        41,
+        252
+      ],
+      "use": "Primary brand colour, buttons, links"
+    },
+    "magenta": {
+      "hex": "#FD23A7",
+      "rgb": [
+        253,
+        35,
+        167
+      ],
+      "use": "Accent, highlights, secondary CTA"
+    },
+    "blue": {
+      "hex": "#4340FA",
+      "rgb": [
+        67,
+        64,
+        250
+      ],
+      "use": "Gradient start, depth"
+    },
+    "pink": {
+      "hex": "#FD5CC9",
+      "rgb": [
+        253,
+        92,
+        201
+      ],
+      "use": "Gradient end, soft accent"
+    }
+  },
+  "neutral": {
+    "ink": {
+      "hex": "#0A0814",
+      "use": "Primary dark background"
+    },
+    "surface": {
+      "hex": "#141026",
+      "use": "Cards and raised surfaces on dark"
+    },
+    "line": {
+      "hex": "#2A2140",
+      "use": "Borders and dividers on dark"
+    },
+    "white": {
+      "hex": "#FFFFFF",
+      "use": "Wordmark on dark, primary text on dark"
+    }
+  },
+  "gradients": {
+    "brand": "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)",
+    "accent": "linear-gradient(135deg, #6929FC 0%, #FD5CC9 100%)",
+    "glow": "radial-gradient(circle at 20% 10%, #6929FC 0%, transparent 60%)"
+  }
+}
