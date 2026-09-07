@@ -8,11 +8,11 @@ import { formatCompact } from "@/lib/utils";
 export default function LandingPage() {
   return (
     <>
-      <Navbar />
-
-      {/* Hero */}
-      <section className="relative overflow-hidden hero-glow">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-16 sm:pt-24 pb-16 relative z-10">
+      {/* Hero — Navbar sits inside so the glow bleeds behind it.
+          overflow-x-clip (not overflow-hidden) keeps the navbar sticky. */}
+      <div className="relative overflow-x-clip hero-glow">
+        <Navbar />
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 sm:pt-14 pb-16 relative z-10">
           <div className="grid gap-14 lg:grid-cols-12 items-center">
             <div className="lg:col-span-6 flex flex-col gap-6">
               <span className="inline-flex items-center gap-2 self-start rounded-full bg-white/[0.05] hairline px-3 py-1.5 text-xs text-white/70">
@@ -56,8 +56,8 @@ export default function LandingPage() {
               <HeroPreview />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       {/* Feature bullets */}
       <section id="how-it-works" className="mx-auto max-w-7xl px-4 sm:px-6 py-16 sm:py-24">
@@ -74,7 +74,7 @@ export default function LandingPage() {
           <FeatureCard
             icon={<Users className="size-5" />}
             title="Build your audience"
-            body="A beautiful profile with tools built for growth. Verified badges, categories, and discovery."
+            body="A beautiful profile with tools built for growth. Verified badges, discoverability, and community features."
           />
           <FeatureCard
             icon={<Heart className="size-5" />}

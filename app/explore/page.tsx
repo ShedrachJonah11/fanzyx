@@ -5,11 +5,9 @@ import { Navbar } from "@/components/shell/Navbar";
 import { Footer } from "@/components/shell/Footer";
 import { CreatorCard } from "@/components/CreatorCard";
 import { SearchBar } from "@/components/ui/SearchBar";
-import { CategoryFilter } from "@/components/ui/CategoryFilter";
 import { Tabs } from "@/components/ui/Tabs";
-import { categories, creators } from "@/lib/mock-data";
+import { creators } from "@/lib/mock-data";
 
-const FILTERS = ["All", ...categories] as const;
 const TABS = [
   { value: "trending", label: "Trending" },
   { value: "popular", label: "Popular" },
@@ -18,12 +16,10 @@ const TABS = [
 
 export default function ExplorePage() {
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState<(typeof FILTERS)[number]>("All");
   const [tab, setTab] = useState("trending");
 
   const list = useMemo(() => {
     let arr = creators.slice();
-    if (cat !== "All") arr = arr.filter((c) => c.category === cat);
     if (q.trim()) {
       const s = q.toLowerCase();
       arr = arr.filter(
@@ -40,7 +36,7 @@ export default function ExplorePage() {
         (a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || b.subscribers - a.subscribers
       );
     return arr;
-  }, [q, cat, tab]);
+  }, [q, tab]);
 
   return (
     <>
@@ -66,11 +62,10 @@ export default function ExplorePage() {
               {list.length} {list.length === 1 ? "creator" : "creators"}
             </span>
           </div>
-          <CategoryFilter categories={FILTERS} active={cat} onChange={(v) => setCat(v as typeof cat)} />
         </div>
 
         {list.length === 0 ? (
-          <EmptyState onReset={() => { setQ(""); setCat("All"); }} />
+          <EmptyState onReset={() => setQ("")} />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {list.map((c) => (
@@ -95,13 +90,13 @@ function EmptyState({ onReset }: { onReset: () => void }) {
       </div>
       <h3 className="text-lg font-semibold text-white">No creators found</h3>
       <p className="text-sm text-white/55 max-w-sm">
-        Try a different search term or reset your filters to browse everyone.
+        Try a different search term to find creators.
       </p>
       <button
         onClick={onReset}
         className="mt-2 text-sm text-white/80 hover:text-white underline underline-offset-4"
       >
-        Reset filters
+        Reset search
       </button>
     </div>
   );

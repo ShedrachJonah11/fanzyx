@@ -45,7 +45,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
 function SidePanel() {
   return (
-    <aside className="hidden lg:flex relative overflow-hidden border-l border-white/[0.06]">
+    <aside className="on-media hidden lg:flex relative overflow-hidden border-l border-white/[0.06]">
       {/* Ambient gradient background */}
       <div
         className="absolute inset-0"

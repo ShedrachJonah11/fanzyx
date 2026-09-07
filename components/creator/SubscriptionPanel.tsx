@@ -8,9 +8,11 @@ import { cn, formatNaira } from "@/lib/utils";
 type Props = {
   creator: Creator;
   onSubscribe: () => void;
+  /** "full" shows Subscribe Now + Bundles.  "bundles" shows only the bundles section. */
+  variant?: "full" | "bundles";
 };
 
-export function SubscriptionPanel({ creator, onSubscribe }: Props) {
+export function SubscriptionPanel({ creator, onSubscribe, variant = "full" }: Props) {
   const [bundlesOpen, setBundlesOpen] = useState(true);
 
   const bundles = [
@@ -21,19 +23,21 @@ export function SubscriptionPanel({ creator, onSubscribe }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* SUBSCRIBE NOW */}
-      <div>
-        <h3 className="text-[12px] uppercase tracking-[0.14em] font-bold text-white/60 mb-3">
-          Subscribe now
-        </h3>
-        <button
-          onClick={onSubscribe}
-          className="on-media w-full h-12 rounded-full bg-[#FD23A7] hover:bg-[#E31E97] text-white font-bold uppercase text-[13px] tracking-[0.08em] flex items-center justify-between px-6 transition-colors shadow-[0_8px_24px_-8px_rgba(253,35,167,0.55)]"
-        >
-          <span>Subscribe</span>
-          <span>Now</span>
-        </button>
-      </div>
+      {/* SUBSCRIBE NOW (hidden in bundles-only variant) */}
+      {variant === "full" ? (
+        <div>
+          <h3 className="text-[12px] uppercase tracking-[0.14em] font-bold text-white/60 mb-3">
+            Subscribe now
+          </h3>
+          <button
+            onClick={onSubscribe}
+            className="on-media w-full h-12 rounded-full bg-[#FD23A7] hover:bg-[#E31E97] text-white font-bold uppercase text-[13px] tracking-[0.08em] flex items-center justify-between px-6 transition-colors shadow-[0_8px_24px_-8px_rgba(253,35,167,0.55)]"
+          >
+            <span>Subscribe</span>
+            <span>Now</span>
+          </button>
+        </div>
+      ) : null}
 
       {/* SUBSCRIPTION IN BUNDLES */}
       <div>

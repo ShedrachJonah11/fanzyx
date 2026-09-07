@@ -68,14 +68,14 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Audience by category</CardTitle>
+            <CardTitle>Audience by age</CardTitle>
           </CardHeader>
           <CardBody className="pt-0 flex flex-col gap-2.5">
             {[
-              { label: "Music fans", pct: 42 },
-              { label: "Lifestyle", pct: 24 },
-              { label: "Fashion", pct: 18 },
-              { label: "Other", pct: 16 },
+              { label: "18–24", pct: 32 },
+              { label: "25–34", pct: 41 },
+              { label: "35–44", pct: 18 },
+              { label: "45+", pct: 9 },
             ].map((r) => (
               <div key={r.label}>
                 <div className="flex justify-between text-xs text-white/70 mb-1">

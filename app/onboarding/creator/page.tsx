@@ -16,7 +16,7 @@ import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Avatar } from "@/components/ui/Avatar";
-import { categories, currentCreator } from "@/lib/mock-data";
+import { currentCreator } from "@/lib/mock-data";
 import { cn, formatNaira } from "@/lib/utils";
 
 const steps = [
@@ -33,7 +33,6 @@ export default function CreatorOnboardingPage() {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
-  const [category, setCategory] = useState<string>("Music");
 
   const next = () => setStep((s) => Math.min(5, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
@@ -118,25 +117,6 @@ export default function CreatorOnboardingPage() {
             <div className="flex flex-col gap-6">
               <Header title="Tell fans about you" body="A short bio helps fans discover and understand what you make." />
               <Textarea label="Bio" placeholder="What kind of content do you create?" value={bio} onChange={(e) => setBio(e.target.value)} />
-              <div>
-                <label className="text-xs font-medium text-white/70 mb-2 block">Category</label>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setCategory(c)}
-                      className={cn(
-                        "h-9 px-4 rounded-full text-[13px] font-medium border transition-colors",
-                        c === category
-                          ? "bg-white text-black border-white"
-                          : "bg-white/[0.04] text-white/75 border-white/10 hover:bg-white/[0.08]"
-                      )}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           ) : null}
 

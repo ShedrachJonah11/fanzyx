@@ -38,7 +38,7 @@ export default function SubscriptionsPage() {
               >
                 {c.name}
               </Link>
-              <div className="text-xs text-white/50">@{c.username} · {c.category}</div>
+              <div className="text-xs text-white/50">@{c.username}</div>
               <div className="mt-1 flex items-center gap-2">
                 <Badge variant="success">Active</Badge>
                 <span className="text-xs text-white/60">

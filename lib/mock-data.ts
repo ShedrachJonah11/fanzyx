@@ -1,28 +1,3 @@
-export type Category =
-  | "Music"
-  | "Fitness"
-  | "Gaming"
-  | "Lifestyle"
-  | "Beauty"
-  | "Fashion"
-  | "Comedy"
-  | "Education"
-  | "Art"
-  | "Other";
-
-export const categories: Category[] = [
-  "Music",
-  "Fitness",
-  "Gaming",
-  "Lifestyle",
-  "Beauty",
-  "Fashion",
-  "Comedy",
-  "Education",
-  "Art",
-  "Other",
-];
-
 export type Creator = {
   id: string;
   name: string;
@@ -34,7 +9,6 @@ export type Creator = {
   verified: boolean;
   subscribers: number;
   monthlyPrice: number;
-  category: Category;
   featured?: boolean;
   socials?: {
     instagram?: string;
@@ -55,7 +29,6 @@ export const platformAuthor: Creator = {
   verified: true,
   subscribers: 0,
   monthlyPrice: 0,
-  category: "Other",
 };
 
 const g = (a: string, b: string, c?: string) =>
@@ -71,14 +44,13 @@ export const creators: Creator[] = [
     id: "1",
     name: "Alex Okafor",
     username: "alex",
-    bio: "Music producer & lifestyle. New drops every week.",
+    bio: "Take a peak 💋 ✨ Sweet on camera, spicy behind it. Customs on request, tips make me smile 🍒 Stick around and let's play 👅",
     avatarGradient: g("#A855F7", "#EC4899"),
     coverGradient: g("#4C1D95", "#831843", "#0F172A"),
     image: pravatar(1),
     verified: true,
     subscribers: 12840,
     monthlyPrice: 5000,
-    category: "Music",
     featured: true,
     socials: { instagram: "@alexokafor", twitter: "@alexok" },
   },
@@ -86,14 +58,13 @@ export const creators: Creator[] = [
     id: "2",
     name: "Zara Bello",
     username: "zarabello",
-    bio: "Fitness coach helping you build habits that last.",
+    bio: "Your favourite bad habit 🖤 daily posts, spicy DMs, and content you'll wanna keep to yourself 🔥 tip me and I'll spoil you",
     avatarGradient: g("#EC4899", "#F97316"),
     coverGradient: g("#831843", "#7C2D12"),
     image: pravatar(5),
     verified: true,
     subscribers: 9421,
     monthlyPrice: 3500,
-    category: "Fitness",
     featured: true,
     socials: { instagram: "@zarabello.fit" },
   },
@@ -101,133 +72,123 @@ export const creators: Creator[] = [
     id: "3",
     name: "Tunde Ade",
     username: "tundeplays",
-    bio: "Competitive FPS. Nightly streams, coaching sessions & VODs.",
+    bio: "Late nights, longer messages 💌 come play with me — no rules, no filter, just us 😈 customs open, tips get the naughty stuff",
     avatarGradient: g("#22D3EE", "#8B5CF6"),
     coverGradient: g("#0E7490", "#4C1D95"),
     image: pravatar(9),
     verified: false,
     subscribers: 5320,
     monthlyPrice: 4000,
-    category: "Gaming",
   },
   {
     id: "4",
     name: "Ijeoma Nwosu",
     username: "ijeoma",
-    bio: "Skincare, glow rituals & product breakdowns.",
+    bio: "Soft skin, softer secrets 💋 subscribe for the real me — the one nobody else gets to see 🌸 tips = personal replies 😉",
     avatarGradient: g("#F472B6", "#A855F7"),
     coverGradient: g("#9D174D", "#4C1D95"),
     image: pravatar(16),
     verified: true,
     subscribers: 18205,
     monthlyPrice: 6000,
-    category: "Beauty",
     featured: true,
   },
   {
     id: "5",
     name: "Kene Obi",
     username: "keneobi",
-    bio: "Streetwear stylist. Weekly fits, drops & reviews.",
+    bio: "Fits off camera hit different 👀 come find out what's underneath 💦 customs open, tips get treats you won't forget",
     avatarGradient: g("#8B5CF6", "#22D3EE"),
     coverGradient: g("#312E81", "#0E7490"),
     image: pravatar(19),
     verified: false,
     subscribers: 4210,
     monthlyPrice: 3000,
-    category: "Fashion",
   },
   {
     id: "6",
     name: "Femi Laughs",
     username: "femilaughs",
-    bio: "Comedy sketches, live shows and behind-the-scenes.",
+    bio: "Funny in the group chat, filthy in your DMs 😏 subscribe and I'll show you the version I keep offline 🔞",
     avatarGradient: g("#F59E0B", "#EF4444"),
     coverGradient: g("#78350F", "#7F1D1D"),
     image: pravatar(20),
     verified: true,
     subscribers: 22140,
     monthlyPrice: 4500,
-    category: "Comedy",
     featured: true,
   },
   {
     id: "7",
     name: "Prof. Ada",
     username: "profada",
-    bio: "Product design courses, weekly critiques & office hours.",
+    bio: "Yes daddy 📚 the good girl the whole class was staring at — come find out why 💋 tips open the private lesson",
     avatarGradient: g("#22C55E", "#0EA5E9"),
     coverGradient: g("#064E3B", "#0C4A6E"),
     image: pravatar(24),
     verified: true,
     subscribers: 7120,
     monthlyPrice: 5500,
-    category: "Education",
   },
   {
     id: "8",
     name: "Nkem Art",
     username: "nkemart",
-    bio: "Digital painter. Timelapses, brush packs, tutorials.",
+    bio: "Muse by day, menace by night 🖤 come see what I paint when the lights go off 🎨💦 customs available for my favourites",
     avatarGradient: g("#A855F7", "#22D3EE"),
     coverGradient: g("#4C1D95", "#0E7490"),
     image: pravatar(25),
     verified: false,
     subscribers: 3980,
     monthlyPrice: 3500,
-    category: "Art",
   },
   {
     id: "9",
     name: "Chi Vlogs",
     username: "chivlogs",
-    bio: "Everyday life in Lagos. New vlog every Sunday.",
+    bio: "Your Sunday guilty pleasure 🍒 unfiltered life + the private stuff I only share here. Tips = louder, longer, closer",
     avatarGradient: g("#EC4899", "#8B5CF6"),
     coverGradient: g("#9D174D", "#4C1D95"),
     image: pravatar(26),
     verified: false,
     subscribers: 6512,
     monthlyPrice: 3000,
-    category: "Lifestyle",
   },
   {
     id: "10",
     name: "Bola Beats",
     username: "bolabeats",
-    bio: "Afrobeats production. Loops, samples & song breakdowns.",
+    bio: "Turn me up 🎧 I make heat in the studio and even more heat off it 🔥 subscribe for the after-hours playlist 💋",
     avatarGradient: g("#F97316", "#EC4899"),
     coverGradient: g("#7C2D12", "#831843"),
     image: pravatar(32),
     verified: true,
     subscribers: 14200,
     monthlyPrice: 5000,
-    category: "Music",
   },
   {
     id: "11",
     name: "Dami Fit",
     username: "damifit",
-    bio: "Home workouts, mobility, and gentle nutrition guides.",
+    bio: "Sweaty in the gym, sweatier for you 💦 the workouts you see + the ones you don't. Tips get me stretching your way 😉",
     avatarGradient: g("#22C55E", "#A855F7"),
     coverGradient: g("#064E3B", "#4C1D95"),
     image: pravatar(44),
     verified: false,
     subscribers: 2810,
     monthlyPrice: 2500,
-    category: "Fitness",
   },
   {
     id: "12",
     name: "Sade Style",
     username: "sadestyle",
-    bio: "Modest fashion, thrift finds & lookbook edits.",
+    bio: "Modest for the timeline, unhinged for my subs 🖤 come see what's under the fit — I don't play shy in DMs 💋",
     avatarGradient: g("#8B5CF6", "#EC4899"),
     coverGradient: g("#312E81", "#831843"),
     image: pravatar(47),
     verified: true,
     subscribers: 9840,
     monthlyPrice: 4000,
-    category: "Fashion",
     featured: true,
   },
 ];
