@@ -394,3 +394,86 @@ html.light .bg-gradient-brand .text-white\/75,
 html.light .bg-gradient-brand .text-white\/70,
 html.light .bg-gradient-brand .text-white\/60,
 html.light .bg-gradient-brand .text-white\/50 { color: #fff !important; }
+
+/* -----------------------------------------------------------
+   Sonner toasts — FanzyX surface
+----------------------------------------------------------- */
+[data-sonner-toaster] {
+  --width: 360px;
+}
+
+[data-sonner-toast] {
+  background: rgba(20, 18, 32, 0.88) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  padding: 14px 16px !important;
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow:
+    0 20px 44px -14px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  font-size: 13px !important;
+  line-height: 1.4;
+}
+
+[data-sonner-toast][data-type="success"] {
+  border-color: rgba(52, 211, 153, 0.35) !important;
+}
+[data-sonner-toast][data-type="error"] {
+  border-color: rgba(248, 113, 113, 0.4) !important;
+}
+[data-sonner-toast][data-type="warning"] {
+  border-color: rgba(251, 191, 36, 0.4) !important;
+}
+[data-sonner-toast][data-type="info"] {
+  border-color: rgba(105, 41, 252, 0.45) !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-weight: 500;
+  color: inherit;
+}
+[data-sonner-toast] [data-description] {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  margin-top: 2px;
+}
+[data-sonner-toast] [data-icon] {
+  margin-right: 10px;
+}
+
+[data-sonner-toast] [data-close-button] {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 999px !important;
+  transition: background 120ms;
+}
+[data-sonner-toast] [data-close-button]:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #fff !important;
+}
+
+/* Light theme */
+html.light [data-sonner-toast] {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: rgba(15, 15, 25, 0.95) !important;
+  border-color: rgba(10, 8, 20, 0.08) !important;
+  box-shadow:
+    0 20px 44px -14px rgba(105, 41, 252, 0.18),
+    0 2px 8px rgba(10, 8, 20, 0.06) !important;
+}
+html.light [data-sonner-toast] [data-description] {
+  color: rgba(15, 15, 25, 0.55);
+}
+html.light [data-sonner-toast] [data-close-button] {
+  background: rgba(10, 8, 20, 0.06) !important;
+  border-color: rgba(10, 8, 20, 0.06) !important;
+  color: rgba(10, 8, 20, 0.65) !important;
+}
+html.light [data-sonner-toast] [data-close-button]:hover {
+  background: rgba(10, 8, 20, 0.12) !important;
+  color: rgba(10, 8, 20, 1) !important;
+}

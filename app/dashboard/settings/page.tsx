@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   Bell,
   CreditCard,
@@ -15,8 +16,14 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { currentCreator } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { useAuth } from "@/services/context";
+import { creatorSubscription } from "@/services/modules/creator";
+import { ApiError } from "@/services/apiClient";
+import type { SubscriptionPricingOut } from "@/services/dtos";
+import { cn, formatNaira } from "@/lib/utils";
+
+const BRAND_GRADIENT =
+  "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)";
 
 type Section =
   | "profile"
@@ -39,6 +46,7 @@ const sections: { value: Section; label: string; icon: React.ComponentType<{ cla
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Section>("profile");
+  const { user } = useAuth();
 
   return (
     <DashboardShell title="Settings" subtitle="Manage your account and preferences.">
@@ -73,8 +81,12 @@ export default function SettingsPage() {
           {tab === "account" ? (
             <BasicCard title="Account" body="Change your email address, username, and language.">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Email" defaultValue="alex@fanzyx.app" />
-                <Input label="Username" defaultValue={currentCreator.username} />
+                <Input label="Email" defaultValue={user?.email ?? ""} readOnly />
+                <Input
+                  label="Username"
+                  defaultValue={user?.username ?? ""}
+                  key={user?.username}
+                />
               </div>
               <Button className="self-start mt-2">Save changes</Button>
             </BasicCard>
@@ -107,28 +119,7 @@ export default function SettingsPage() {
               </div>
             </BasicCard>
           ) : null}
-          {tab === "subscription" ? (
-            <BasicCard title="Subscription" body="Set your monthly plan price and welcome message.">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs font-medium text-white/70 mb-1.5 block">Monthly price</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/55">₦</span>
-                    <input
-                      type="number"
-                      defaultValue={currentCreator.monthlyPrice}
-                      className="w-full h-11 rounded-[12px] bg-white/[0.04] hairline text-[14px] text-white pl-8 pr-4 outline-none focus:border-white/25"
-                    />
-                  </div>
-                </div>
-              </div>
-              <Textarea
-                label="Welcome message"
-                placeholder="A short thank-you to new subscribers"
-                defaultValue="Welcome! Check out my subscriber-only posts and message me anytime."
-              />
-            </BasicCard>
-          ) : null}
+          {tab === "subscription" ? <SubscriptionSection /> : null}
           {tab === "payouts" ? (
             <BasicCard title="Payouts" body="Manage where and how you get paid.">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -145,12 +136,16 @@ export default function SettingsPage() {
 }
 
 function ProfileSection() {
+  const { user } = useAuth();
+  const displayName = user?.displayName || user?.username || "You";
+
   return (
     <BasicCard title="Profile" body="This information appears on your public profile.">
       <div className="flex items-center gap-4">
         <Avatar
-          name={currentCreator.name}
-          gradient={currentCreator.avatarGradient}
+          name={displayName}
+          gradient={BRAND_GRADIENT}
+          image={user?.avatarUrl ?? undefined}
           size={72}
         />
         <div className="flex gap-2">
@@ -163,10 +158,22 @@ function ProfileSection() {
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Display name" defaultValue={currentCreator.name} />
-        <Input label="Username" defaultValue={currentCreator.username} />
+        <Input
+          label="Display name"
+          defaultValue={user?.displayName ?? ""}
+          key={`dn-${user?.id}`}
+        />
+        <Input
+          label="Username"
+          defaultValue={user?.username ?? ""}
+          key={`un-${user?.id}`}
+        />
       </div>
-      <Textarea label="Bio" defaultValue={currentCreator.bio} />
+      <Textarea
+        label="Bio"
+        defaultValue={user?.bio ?? ""}
+        key={`bio-${user?.id}`}
+      />
       <div className="flex items-center gap-3 mt-2">
         <Button>Save changes</Button>
         <Button variant="ghost">Cancel</Button>
@@ -215,6 +222,264 @@ function ToggleRow({ label, defaultOn = false }: { label: string; defaultOn?: bo
           )}
         />
       </button>
+    </div>
+  );
+}
+
+/* ── Subscription pricing ─────────────────────────────────────────── */
+
+const MAX_NAIRA = 50_000;
+const MAX_KOBO = MAX_NAIRA * 100;
+
+function SubscriptionSection() {
+  const [pricing, setPricing] = useState<SubscriptionPricingOut | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [baseNaira, setBaseNaira] = useState<string>("");
+  const [discountPct, setDiscountPct] = useState<string>("0");
+  const [expiryDate, setExpiryDate] = useState<string>(""); // yyyy-mm-dd
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const p = await creatorSubscription.get();
+      applyServerState(p);
+    } catch (e) {
+      if (e instanceof ApiError) toast.error(e.detail ?? e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyServerState = (p: SubscriptionPricingOut) => {
+    setPricing(p);
+    setBaseNaira(String(Math.round(p.monthlyPriceKobo / 100)));
+    setDiscountPct(String(p.discountPct ?? 0));
+    setExpiryDate(
+      p.discountExpiresAt
+        ? new Date(p.discountExpiresAt).toISOString().slice(0, 10)
+        : ""
+    );
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const baseNum = Number(baseNaira);
+  const pctNum = Number(discountPct);
+  const baseKobo = Math.round((Number.isFinite(baseNum) ? baseNum : 0) * 100);
+  const validBase = Number.isFinite(baseNum) && baseNum >= 1 && baseNum <= MAX_NAIRA;
+  const validPct =
+    Number.isFinite(pctNum) && pctNum >= 0 && pctNum <= 100 && Number.isInteger(pctNum);
+  const expiryDateObj = expiryDate ? new Date(`${expiryDate}T23:59:59`) : null;
+  const validExpiry = !expiryDateObj || expiryDateObj.getTime() > Date.now();
+  const canSave = validBase && validPct && validExpiry && !saving && !loading;
+
+  const preview = useMemo(() => {
+    const rows = [1, 2, 3].map((months) => {
+      const gross = baseKobo * months;
+      const discountKobo = Math.round((gross * (validPct ? pctNum : 0)) / 100);
+      const priceKobo = gross - discountKobo;
+      return { months, gross, discountKobo, priceKobo };
+    });
+    return rows;
+  }, [baseKobo, pctNum, validPct]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const patch: {
+        monthlyPriceKobo: number;
+        discountPct?: number;
+        discountExpiresAt?: string | null;
+      } = {
+        monthlyPriceKobo: Math.min(baseKobo, MAX_KOBO),
+      };
+      patch.discountPct = pctNum;
+      if (expiryDate) {
+        patch.discountExpiresAt = new Date(`${expiryDate}T23:59:59`).toISOString();
+      } else if (pricing?.discountExpiresAt) {
+        patch.discountExpiresAt = null; // clear existing expiry
+      }
+      const res = await creatorSubscription.update(patch);
+      applyServerState(res);
+      toast.success("Subscription updated");
+    } catch (e) {
+      const msg =
+        e instanceof ApiError
+          ? e.code === "validation_error"
+            ? "Check the values and try again."
+            : e.detail ?? e.message
+          : "Couldn't save subscription";
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const discountLive = validPct && pctNum > 0;
+  const active = pricing?.discountActive ?? false;
+
+  return (
+    <div className="surface-card p-6 flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg font-semibold text-white">Create subscription</h2>
+        <p className="text-sm text-white/55 mt-1">
+          Set your base monthly price. Add an optional discount that applies to all
+          three durations. Fans can subscribe for 1, 2, or 3 months.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="py-10 flex items-center justify-center">
+          <span className="size-6 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
+        </div>
+      ) : (
+        <form className="flex flex-col gap-5" onSubmit={submit}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-white/70">Base amount</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/55">₦</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MAX_NAIRA}
+                  step={1}
+                  value={baseNaira}
+                  onChange={(e) => setBaseNaira(e.target.value)}
+                  className={cn(
+                    "w-full h-11 rounded-[12px] bg-white/[0.04] hairline text-[14px] text-white pl-8 pr-4 outline-none focus:border-white/25 focus:bg-white/[0.06] transition-colors",
+                    !validBase && baseNaira && "border-red-400/40"
+                  )}
+                />
+              </div>
+              <span className="text-[11px] text-white/45">
+                Max: {formatNaira(MAX_NAIRA)}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-white/70">
+                Attach discount (%)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={discountPct}
+                  onChange={(e) => setDiscountPct(e.target.value)}
+                  className={cn(
+                    "w-full h-11 rounded-[12px] bg-white/[0.04] hairline text-[14px] text-white pl-4 pr-10 outline-none focus:border-white/25 focus:bg-white/[0.06] transition-colors",
+                    !validPct && discountPct && "border-red-400/40"
+                  )}
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/55">%</span>
+              </div>
+              <span className="text-[11px] text-white/45">
+                0 to disable. Applies to all durations.
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-white/70">
+                Discount expiry (optional)
+              </label>
+              <input
+                type="date"
+                value={expiryDate}
+                min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                disabled={!discountLive}
+                className={cn(
+                  "w-full h-11 rounded-[12px] bg-white/[0.04] hairline text-[14px] text-white px-4 outline-none focus:border-white/25 focus:bg-white/[0.06] transition-colors disabled:opacity-50",
+                  !validExpiry && "border-red-400/40"
+                )}
+              />
+              <span className="text-[11px] text-white/45">
+                {discountLive
+                  ? expiryDate
+                    ? "Discount auto-turns off after this date."
+                    : "Leave blank for no expiry."
+                  : "Set a discount % first."}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-white/70">Status</label>
+              <div className="h-11 rounded-[12px] hairline bg-white/[0.03] px-4 flex items-center">
+                {pricing && pricing.discountPct > 0 ? (
+                  active ? (
+                    <Badge variant="brand">Discount active</Badge>
+                  ) : (
+                    <Badge>Discount expired</Badge>
+                  )
+                ) : (
+                  <span className="text-sm text-white/55">No discount</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div className="rounded-[14px] hairline bg-white/[0.02] p-4 flex flex-col gap-3">
+            <span className="text-xs uppercase tracking-wider text-white/45">
+              Preview
+            </span>
+            <ul className="flex flex-col divide-y divide-white/[0.05]">
+              {preview.map((row) => (
+                <li
+                  key={row.months}
+                  className="flex items-center justify-between py-2 text-sm"
+                >
+                  <span className="text-white/80">
+                    {row.months} {row.months === 1 ? "month" : "months"}
+                  </span>
+                  <div className="flex items-baseline gap-2">
+                    {row.discountKobo > 0 ? (
+                      <span className="text-[11px] text-white/40 line-through">
+                        {formatNaira(row.gross / 100)}
+                      </span>
+                    ) : null}
+                    <span className="text-white font-semibold">
+                      {formatNaira(row.priceKobo / 100)}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-[11px]",
+                        row.discountKobo > 0 ? "text-[#FD5CC9]" : "text-white/30"
+                      )}
+                    >
+                      {row.discountKobo > 0
+                        ? `${formatNaira(row.discountKobo / 100)} off`
+                        : "—"}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button type="submit" disabled={!canSave}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            {!validExpiry ? (
+              <span className="text-xs text-red-300">Expiry must be a future date.</span>
+            ) : null}
+          </div>
+        </form>
+      )}
     </div>
   );
 }

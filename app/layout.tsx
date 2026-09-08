@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AppToaster } from "@/components/AppToaster";
+import { EmailVerifyManager } from "@/components/auth/EmailVerifyManager";
+import { AuthProvider } from "@/services/context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,10 +50,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      <head suppressHydrationWarning>
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: themeInit }}
+        />
       </head>
-      <body className="min-h-full bg-app text-app flex flex-col">{children}</body>
+      <body className="min-h-full bg-app text-app flex flex-col" suppressHydrationWarning>
+        <AuthProvider>
+          <EmailVerifyManager>{children}</EmailVerifyManager>
+        </AuthProvider>
+        <AppToaster />
+      </body>
     </html>
   );
 }

@@ -8,7 +8,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
-import { currentCreator } from "@/lib/mock-data";
+import { useAuth } from "@/services/context";
 import { cn, formatNaira } from "@/lib/utils";
 
 const invites = [
@@ -42,7 +42,9 @@ const invites = [
 ];
 
 export default function ReferralsPage() {
-  const link = `https://fanzyx.app/ref/${currentCreator.username}`;
+  const { user } = useAuth();
+  const refCode = user?.referralCode || user?.username || "";
+  const link = refCode ? `https://fanzyx.app/ref/${refCode}` : "https://fanzyx.app";
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {

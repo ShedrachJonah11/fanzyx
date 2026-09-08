@@ -4,7 +4,6 @@ import {
   Heart,
   Lock,
   MessageCircle,
-  MoreHorizontal,
   Play,
   Share2,
   Volume2,
@@ -12,6 +11,7 @@ import {
 import { Avatar } from "@/components/ui/Avatar";
 import { VerifiedBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { PostMenu } from "@/components/PostMenu";
 import type { Creator, Post } from "@/lib/mock-data";
 import { cn, formatCompact, formatNaira, timeAgo } from "@/lib/utils";
 
@@ -43,9 +43,7 @@ export function PostCard({ post, creator, showHeader = true }: Props) {
             </div>
             <span className="text-xs text-white/45 truncate">@{creator.username}</span>
           </div>
-          <button className="text-white/50 hover:text-white p-1.5 rounded-full hover:bg-white/[0.06]">
-            <MoreHorizontal className="size-4" />
-          </button>
+          <PostMenu authorUsername={creator.username} />
         </header>
       ) : null}
 

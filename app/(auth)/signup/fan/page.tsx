@@ -1,15 +1,79 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ArrowLeft, AtSign, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { useAuth } from "@/services/context";
+import { ApiError } from "@/services/apiClient";
+import { postAuthRoute } from "@/services/postAuthRoute";
+
+const FAN_ERROR: Record<string, string> = {
+  username_taken: "That username is already taken.",
+  email_taken: "An account already exists for this email.",
+  weak_password: "Password is too weak. Use 8+ characters with a mix.",
+  age_required: "You must confirm you are 18 or older.",
+  rate_limited: "Too many attempts. Try again in a moment.",
+};
 
 export default function FanSignupPage() {
+  const router = useRouter();
+  const { signupFan } = useAuth();
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [age18, setAge18] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const prefill = new URLSearchParams(window.location.search).get("email");
+    if (prefill) setEmail(prefill);
+  }, []);
+
+  const valid =
+    username.trim().length >= 3 &&
+    /\S+@\S+\.\S+/.test(email) &&
+    password.length >= 8 &&
+    age18;
+
+  const showError = (err: unknown) => {
+    const msg =
+      err instanceof ApiError
+        ? FAN_ERROR[err.code] ?? err.detail ?? err.message
+        : "Something went wrong. Try again.";
+    toast.error(msg);
+  };
+
+  const onSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!valid) return;
+      setSubmitting(true);
+      try {
+        const user = await signupFan({
+          username: username.trim(),
+          email: email.trim(),
+          password,
+          age18: true,
+          emailOptin: emailOptIn,
+        });
+        toast.success("Account created — welcome to FanzyX");
+        router.replace(postAuthRoute(user));
+      } catch (err) {
+        showError(err);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [valid, signupFan, username, email, password, emailOptIn, router]
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,29 +93,41 @@ export default function FanSignupPage() {
         </p>
       </div>
 
-      <button className="btn-google h-11 rounded-[12px] text-sm font-medium transition-colors flex items-center justify-center gap-3">
-        <GoogleG />
-        Continue with Google
-      </button>
+      <GoogleSignInButton
+        role="fan"
+        next="/feed"
+        label="Continue with Google"
+      />
 
       <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-white/40">
         <div className="flex-1 divider" /> or <div className="flex-1 divider" />
       </div>
 
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!age18) return;
-        }}
-      >
-        <Input label="Username" placeholder="alexokafor" leftIcon={<AtSign />} />
-        <Input type="email" label="Email" placeholder="you@fanzyx.app" leftIcon={<Mail />} />
+      <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+        <Input
+          label="Username"
+          placeholder="alexokafor"
+          leftIcon={<AtSign />}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
+        />
+        <Input
+          type="email"
+          label="Email"
+          placeholder="you@fanzyx.app"
+          leftIcon={<Mail />}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+        />
         <Input
           type="password"
           label="Password"
-          placeholder="Create a password"
+          placeholder="At least 8 characters"
           leftIcon={<Lock />}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
         />
 
@@ -63,8 +139,8 @@ export default function FanSignupPage() {
           variant="fan"
         />
 
-        <Button size="lg" className="w-full" href={age18 ? "/feed" : undefined} disabled={!age18}>
-          Create fan account
+        <Button size="lg" className="w-full" disabled={!valid || submitting}>
+          {submitting ? "Creating account…" : "Create fan account"}
         </Button>
       </form>
 
@@ -129,16 +205,5 @@ export function LegalBlock({
         }
       />
     </div>
-  );
-}
-
-function GoogleG() {
-  return (
-    <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden>
-      <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.7 0 6.7 5.4 2.7 13.2l7.9 6.1C12.5 13 17.7 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.2-3.1-.5-4.5H24v9h12.7c-.6 3-2.2 5.5-4.7 7.2l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.6z" />
-      <path fill="#FBBC05" d="M10.6 28.7A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.6 2.4 10.8l8.2-6.1z" />
-      <path fill="#34A853" d="M24 48c6.5 0 12-2.1 16-5.8l-7.6-5.9c-2.1 1.4-4.9 2-8.4 2-6.3 0-11.5-3.5-13.4-8.4l-8.2 6.1C6.7 42.6 14.7 48 24 48z" />
-    </svg>
   );
 }

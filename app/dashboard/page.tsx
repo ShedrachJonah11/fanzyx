@@ -8,7 +8,6 @@ import { FeedTabs } from "@/components/feed/FeedTabs";
 import { CreatorRail } from "@/components/creator/CreatorRail";
 import { FeaturedCreators } from "@/components/featured/FeaturedCreators";
 import {
-  currentCreator,
   featuredCreators,
   getCreator,
   platformAuthor,
@@ -36,7 +35,7 @@ export default function DashboardHomePage() {
     <DashboardShell variant="creator">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className="flex flex-col gap-4 min-w-0">
-          <Composer author={currentCreator} />
+          <Composer />
 
           {/* Mobile-only Featured Creators at the top */}
           <div className="lg:hidden">

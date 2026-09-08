@@ -1,17 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, CreditCard, Lock, Shield, User as UserIcon, UserCog } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  AtSign,
+  Bell,
+  CreditCard,
+  ExternalLink,
+  Globe,
+  Lock,
+  LogOut,
+  Shield,
+  TriangleAlert,
+  User as UserIcon,
+  UserCog,
+} from "lucide-react";
 import { DashboardShell } from "@/components/shell/DashboardShell";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { currentCreator } from "@/lib/mock-data";
+import { Input, Textarea } from "@/components/ui/Input";
+import { useAuth } from "@/services/context";
+import { ApiError } from "@/services/apiClient";
+import type { UpdateMeIn } from "@/services/dtos";
 import { cn } from "@/lib/utils";
 
 type Section = "profile" | "account" | "notifications" | "privacy" | "security" | "subscription";
 
-const sections: { value: Section; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const sections: {
+  value: Section;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { value: "profile", label: "Profile", icon: UserIcon },
   { value: "account", label: "Account", icon: UserCog },
   { value: "notifications", label: "Notifications", icon: Bell },
@@ -22,6 +42,21 @@ const sections: { value: Section; label: string; icon: React.ComponentType<{ cla
 
 export default function FanSettingsPage() {
   const [tab, setTab] = useState<Section>("profile");
+  const router = useRouter();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === "creator") router.replace("/dashboard/settings");
+  }, [user, router]);
+
+  if (user?.role === "creator") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-app">
+        <span className="size-6 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <DashboardShell variant="fan" title="Settings" subtitle="Manage your account.">
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
@@ -50,30 +85,13 @@ export default function FanSettingsPage() {
           </ul>
         </aside>
 
-        <div className="surface-card p-6 flex flex-col gap-5">
-          {tab === "profile" ? (
-            <>
-              <SectionHead title="Profile" body="This information appears on your account." />
-              <div className="flex items-center gap-4">
-                <Avatar name={currentCreator.name} gradient={currentCreator.avatarGradient} size={72} />
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm">Upload</Button>
-                  <Button variant="ghost" size="sm">Remove</Button>
-                </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Display name" defaultValue={currentCreator.name} />
-                <Input label="Username" defaultValue={currentCreator.username} />
-              </div>
-              <Button className="self-start mt-2">Save</Button>
-            </>
-          ) : null}
-          {tab !== "profile" ? (
+        <div className="surface-card p-6 flex flex-col gap-6">
+          {tab === "profile" ? <ProfileSection /> : null}
+          {tab === "account" ? <AccountSection /> : null}
+          {tab !== "profile" && tab !== "account" ? (
             <>
               <SectionHead title={cap(tab)} body="Configure your preferences." />
-              <p className="text-sm text-white/55">
-                Preferences for {tab} appear here.
-              </p>
+              <p className="text-sm text-white/55">Preferences for {tab} appear here.</p>
             </>
           ) : null}
         </div>
@@ -81,6 +99,314 @@ export default function FanSettingsPage() {
     </DashboardShell>
   );
 }
+
+/* ── Profile ─────────────────────────────────────────── */
+
+function ProfileSection() {
+  const { user, updateMe, loading: authLoading } = useAuth();
+  const [form, setForm] = useState<UpdateMeIn>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setForm({
+      displayName: user.displayName ?? "",
+      bio: user.bio ?? "",
+      avatarUrl: user.avatarUrl ?? "",
+      coverUrl: user.coverUrl ?? "",
+      socials: {},
+    });
+  }, [user]);
+
+  const dirty = useMemo(() => {
+    if (!user) return false;
+    return (
+      (form.displayName ?? "") !== (user.displayName ?? "") ||
+      (form.bio ?? "") !== (user.bio ?? "") ||
+      (form.avatarUrl ?? "") !== (user.avatarUrl ?? "") ||
+      (form.coverUrl ?? "") !== (user.coverUrl ?? "") ||
+      !!(form.socials?.instagram ||
+        form.socials?.x ||
+        form.socials?.tiktok ||
+        form.socials?.website)
+    );
+  }, [form, user]);
+
+  const set = <K extends keyof UpdateMeIn>(key: K, value: UpdateMeIn[K]) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const setSocial = (key: "instagram" | "x" | "tiktok" | "website", value: string) =>
+    setForm((f) => ({ ...f, socials: { ...(f.socials ?? {}), [key]: value } }));
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dirty || saving) return;
+    setSaving(true);
+    try {
+      const patch: UpdateMeIn = {};
+      if ((form.displayName ?? "") !== (user?.displayName ?? ""))
+        patch.displayName = form.displayName?.trim() || undefined;
+      if ((form.bio ?? "") !== (user?.bio ?? ""))
+        patch.bio = form.bio?.trim() || undefined;
+      if ((form.avatarUrl ?? "") !== (user?.avatarUrl ?? ""))
+        patch.avatarUrl = form.avatarUrl?.trim() || undefined;
+      if ((form.coverUrl ?? "") !== (user?.coverUrl ?? ""))
+        patch.coverUrl = form.coverUrl?.trim() || undefined;
+      const socials = Object.fromEntries(
+        Object.entries(form.socials ?? {}).filter(([, v]) => (v ?? "").trim().length > 0)
+      );
+      if (Object.keys(socials).length > 0) patch.socials = socials;
+      await updateMe(patch);
+      toast.success("Profile saved");
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.detail ?? e.message : "Couldn't save profile";
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (authLoading || !user) {
+    return (
+      <div className="py-16 flex items-center justify-center">
+        <span className="size-6 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <form className="flex flex-col gap-6" onSubmit={onSubmit}>
+      <SectionHead title="Profile" body="This information is visible to fans on your profile." />
+
+      <div className="flex items-center gap-4">
+        <Avatar
+          name={form.displayName || user.username}
+          image={form.avatarUrl || user.avatarUrl || undefined}
+          gradient="linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)"
+          size={72}
+        />
+        <div className="flex flex-col text-sm">
+          <span className="text-white font-medium">@{user.username}</span>
+          <span className="text-white/50 text-xs">
+            {user.role === "creator" ? "Creator account" : "Fan account"}
+            {user.verified ? " · verified" : ""}
+          </span>
+        </div>
+      </div>
+
+      <Input
+        label="Display name"
+        placeholder="Your name"
+        value={form.displayName ?? ""}
+        onChange={(e) => set("displayName", e.target.value)}
+        maxLength={80}
+      />
+
+      <Textarea
+        label={`Bio (${(form.bio ?? "").length}/500)`}
+        placeholder="Tell fans a little about you…"
+        value={form.bio ?? ""}
+        onChange={(e) => set("bio", e.target.value.slice(0, 500))}
+      />
+
+      <div className="flex flex-col gap-3">
+        <SectionHead title="Socials" body="Links displayed on your profile." />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input
+            label="Instagram"
+            placeholder="username"
+            leftIcon={<AtSign />}
+            value={form.socials?.instagram ?? ""}
+            onChange={(e) => setSocial("instagram", e.target.value)}
+          />
+          <Input
+            label="X"
+            placeholder="handle"
+            leftIcon={<AtSign />}
+            value={form.socials?.x ?? ""}
+            onChange={(e) => setSocial("x", e.target.value)}
+          />
+          <Input
+            label="TikTok"
+            placeholder="handle"
+            leftIcon={<AtSign />}
+            value={form.socials?.tiktok ?? ""}
+            onChange={(e) => setSocial("tiktok", e.target.value)}
+          />
+          <Input
+            label="Website"
+            placeholder="https://…"
+            leftIcon={<Globe />}
+            value={form.socials?.website ?? ""}
+            onChange={(e) => setSocial("website", e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-2 border-t border-white/[0.05]">
+        <Button type="submit" disabled={!dirty || saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/* ── Account (delete) ────────────────────────────────── */
+
+function AccountSection() {
+  const { user, logout } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      toast.success("Signed out");
+    } catch {
+      toast.error("Couldn't sign out");
+      setLoggingOut(false);
+      return;
+    }
+    // Hard nav — avoids the AuthGate race that would otherwise append ?next=…
+    window.location.href = "/login";
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <SectionHead title="Account" body="Manage your account." />
+
+      <div className="rounded-[14px] hairline bg-white/[0.02] p-5 flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex items-center justify-center size-9 rounded-full bg-white/[0.06] text-white/70 shrink-0">
+            <LogOut className="size-4" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[15px] font-semibold text-white">Log out</h3>
+            <p className="text-sm text-white/60 mt-1 max-w-md">
+              Sign out of FanzyX on this device. You can log back in anytime.
+            </p>
+          </div>
+        </div>
+        <div>
+          <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
+            {loggingOut ? "Signing out…" : "Log out"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-[14px] border border-red-500/20 bg-red-500/[0.05] p-5 flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex items-center justify-center size-9 rounded-full bg-red-500/15 text-red-300 shrink-0">
+            <TriangleAlert className="size-4" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-[15px] font-semibold text-white">Delete my account</h3>
+            <p className="text-sm text-white/60 mt-1 max-w-md">
+              This soft-deletes your account and revokes all sessions. Restoration is
+              only possible from support within 30 days.
+            </p>
+          </div>
+        </div>
+        <div>
+          <Button
+            variant="secondary"
+            className="!text-red-200 !bg-red-500/10 !border-red-500/30 hover:!bg-red-500/20"
+            onClick={() => setConfirmOpen(true)}
+            disabled={!user}
+          >
+            Delete account
+          </Button>
+        </div>
+      </div>
+
+      {confirmOpen && user ? (
+        <DeleteAccountModal
+          username={user.username}
+          onClose={() => setConfirmOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function DeleteAccountModal({
+  username,
+  onClose,
+}: {
+  username: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const { deleteMe } = useAuth();
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const match = typed.trim() === username;
+
+  const confirm = async () => {
+    if (!match || busy) return;
+    setBusy(true);
+    try {
+      await deleteMe();
+      toast.success("Your account has been deleted");
+      router.replace("/goodbye");
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.detail ?? e.message : "Couldn't delete account";
+      toast.error(msg);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={busy ? undefined : onClose}
+      />
+      <div className="relative w-full max-w-md surface-card p-6 flex flex-col gap-4">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex items-center justify-center size-10 rounded-full bg-red-500/15 text-red-300 shrink-0">
+            <TriangleAlert className="size-5" />
+          </span>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-white">Delete your account</h3>
+            <p className="text-sm text-white/60 mt-1">
+              This is permanent. Type <span className="text-white font-medium">@{username}</span>{" "}
+              below to confirm.
+            </p>
+          </div>
+        </div>
+
+        <Input
+          label={`Type @${username}`}
+          placeholder={`@${username}`}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value.replace(/^@/, ""))}
+          autoFocus
+        />
+
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <Button variant="secondary" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            className="!bg-red-500 !text-white hover:!bg-red-500/90"
+            disabled={!match || busy}
+            onClick={confirm}
+          >
+            {busy ? "Deleting…" : "Delete permanently"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── shared ──────────────────────────────────────────── */
 
 function SectionHead({ title, body }: { title: string; body: string }) {
   return (

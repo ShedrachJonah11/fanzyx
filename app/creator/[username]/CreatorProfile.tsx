@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   DollarSign,
@@ -25,12 +26,40 @@ import { FeedTabs } from "@/components/feed/FeedTabs";
 import Link from "next/link";
 import { creators as allCreators, type Creator, type Post } from "@/lib/mock-data";
 import { cn, formatCompact, formatNaira } from "@/lib/utils";
+import { useAuth } from "@/services/context";
+import { useFollow, useUserProfile } from "@/services/hooks/users";
+import { ApiError } from "@/services/apiClient";
 
 export function CreatorProfile({ creator, posts }: { creator: Creator; posts: Post[] }) {
   const router = useRouter();
   const [tab, setTab] = useState("posts");
   const [subOpen, setSubOpen] = useState(false);
-  const [following, setFollowing] = useState(false);
+
+  const { user } = useAuth();
+  const isSelf = user?.username === creator.username;
+
+  const profile = useUserProfile(isSelf ? null : creator.username);
+  const followState = useFollow(
+    creator.username,
+    profile.data?.isFollowing ?? undefined
+  );
+  const following = followState.following;
+
+  const handleFollowClick = async () => {
+    if (isSelf) return;
+    try {
+      await followState.toggle();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const map: Record<string, string> = {
+          user_not_found: "Creator not found",
+          self_follow: "You can't follow yourself",
+          blocked: "This user is unavailable.",
+        };
+        toast.error(map[e.code] ?? e.detail ?? e.message);
+      }
+    }
+  };
 
   const tabs = [
     { value: "posts", label: "Posts" },
@@ -91,23 +120,26 @@ export function CreatorProfile({ creator, posts }: { creator: Creator; posts: Po
 
             {/* Actions — single straight line, right-aligned */}
             <div className="flex items-center gap-2 flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden mt-4 sm:mt-6">
-              <button
-                onClick={() => setFollowing((v) => !v)}
-                aria-pressed={following}
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-semibold transition-colors shrink-0",
-                  following
-                    ? "bg-white/[0.06] hairline text-white hover:bg-white/[0.1]"
-                    : "bg-gradient-brand text-white on-media shadow-[0_10px_30px_-12px_rgba(253,35,167,0.55)] hover:opacity-95"
-                )}
-              >
-                <Heart
-                  className="size-4"
-                  fill={following ? "currentColor" : "none"}
-                  strokeWidth={2}
-                />
-                {following ? "Following" : "Follow"}
-              </button>
+              {!isSelf ? (
+                <button
+                  onClick={handleFollowClick}
+                  aria-pressed={following}
+                  disabled={followState.loading}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-semibold transition-colors shrink-0 disabled:opacity-70",
+                    following
+                      ? "bg-white/[0.06] hairline text-white hover:bg-white/[0.1]"
+                      : "bg-gradient-brand text-white on-media shadow-[0_10px_30px_-12px_rgba(253,35,167,0.55)] hover:opacity-95"
+                  )}
+                >
+                  <Heart
+                    className="size-4"
+                    fill={following ? "currentColor" : "none"}
+                    strokeWidth={2}
+                  />
+                  {following ? "Following" : "Follow"}
+                </button>
+              ) : null}
               <IconAction label="Message">
                 <MessageCircle className="size-4" />
               </IconAction>

@@ -12,8 +12,11 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import type { Creator } from "@/lib/mock-data";
+import { useAuth } from "@/services/context";
 import { cn } from "@/lib/utils";
+
+const BRAND_GRADIENT =
+  "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)";
 
 type Audience = "everyone" | "subscribers" | "ppv";
 
@@ -23,29 +26,33 @@ const audienceLabel: Record<Audience, string> = {
   ppv: "Pay-per-view",
 };
 
-export function Composer({ author }: { author: Creator }) {
+export function Composer() {
+  const { user } = useAuth();
   const [text, setText] = useState("");
   const [audience, setAudience] = useState<Audience>("subscribers");
   const [showMore, setShowMore] = useState(false);
   const canPost = text.trim().length > 0;
   const remaining = 280 - text.length;
 
+  const displayName = user?.displayName || user?.username || "You";
+  const handle = user?.username ?? "you";
+
   return (
     <div className="surface-card overflow-hidden">
       {/* Header row: avatar + handle */}
       <div className="flex items-center gap-3 px-4 pt-4">
         <Avatar
-          name={author.name}
-          gradient={author.avatarGradient}
-          image={author.image}
+          name={displayName}
+          gradient={BRAND_GRADIENT}
+          image={user?.avatarUrl ?? undefined}
           size={36}
         />
         <div className="flex flex-col leading-tight min-w-0">
           <span className="text-sm font-semibold text-white truncate">
-            {author.name}
+            {displayName}
           </span>
           <span className="text-[11px] text-white/50 truncate">
-            @{author.username}
+            @{handle}
           </span>
         </div>
       </div>

@@ -22,12 +22,15 @@ import { Avatar } from "@/components/ui/Avatar";
 import { VerifiedBadge } from "@/components/ui/Badge";
 import {
   conversations as allConversations,
-  currentCreator,
   messagesFor,
   type Conversation,
   type Message,
 } from "@/lib/mock-data";
+import { useAuth } from "@/services/context";
 import { cn } from "@/lib/utils";
+
+const BRAND_GRADIENT =
+  "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)";
 
 type Filter = "all" | "unread" | "pinned";
 
@@ -403,6 +406,8 @@ function groupMessages(messages: Message[]): Group[] {
 function MessageGroup({ group, conv }: { group: Group; conv: Conversation }) {
   const { fromMe, messages } = group;
   const lastMsg = messages[messages.length - 1];
+  const { user } = useAuth();
+  const meName = user?.displayName || user?.username || "You";
   return (
     <div className={cn("flex items-end gap-2", fromMe ? "justify-end" : "justify-start")}>
       {!fromMe ? (
@@ -466,9 +471,9 @@ function MessageGroup({ group, conv }: { group: Group; conv: Conversation }) {
       {fromMe ? (
         <div className="w-7 shrink-0 self-end">
           <Avatar
-            name={currentCreator.name}
-            gradient={currentCreator.avatarGradient}
-            image={currentCreator.image}
+            name={meName}
+            gradient={BRAND_GRADIENT}
+            image={user?.avatarUrl ?? undefined}
             size={28}
           />
         </div>

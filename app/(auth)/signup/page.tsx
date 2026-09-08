@@ -2,7 +2,14 @@ import Link from "next/link";
 import { ArrowRight, Compass, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function SignupChoicePage() {
+export default async function SignupChoicePage({
+  searchParams,
+}: PageProps<"/signup">) {
+  const params = await searchParams;
+  const rawEmail = params?.email;
+  const email = typeof rawEmail === "string" ? rawEmail : undefined;
+  const q = email ? `?email=${encodeURIComponent(email)}` : "";
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
@@ -14,16 +21,17 @@ export default function SignupChoicePage() {
         </p>
       </div>
 
+
       <div className="flex flex-col gap-3">
         <ChoiceCard
-          href="/signup/fan"
+          href={`/signup/fan${q}`}
           eyebrow="I'm here to discover"
           title="Join as a fan"
           body="Follow your favourite creators and unlock subscriber-only content."
           icon={<Compass className="size-5" />}
         />
         <ChoiceCard
-          href="/signup/creator"
+          href={`/signup/creator${q}`}
           eyebrow="I want to publish & earn"
           title="Join as a creator"
           body="Build an audience, publish exclusive posts, and get paid monthly."

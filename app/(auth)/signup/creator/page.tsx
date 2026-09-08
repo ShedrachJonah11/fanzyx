@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   AtSign,
@@ -19,6 +21,11 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { LegalBlock } from "@/app/(auth)/signup/fan/page";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { useAuth } from "@/services/context";
+import { auth as authApi } from "@/services/modules";
+import { ApiError } from "@/services/apiClient";
+import { postAuthRoute } from "@/services/postAuthRoute";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
@@ -28,8 +35,36 @@ const STEPS = [
   { id: 4, label: "Identity" },
 ] as const;
 
+const CREATOR_ERROR: Record<string, string> = {
+  username_taken: "That username is already taken.",
+  email_taken: "An account already exists for this email.",
+  invalid_otp: "That code isn't right. Try again.",
+  flow_expired: "This signup session expired. Start over.",
+  weak_password: "Password is too weak. Use 8+ characters with a mix.",
+  age_required: "You must confirm you are 18 or older.",
+  rate_limited: "Too many attempts. Try again in a moment.",
+};
+
+function readError(err: unknown, fallback = "Something went wrong."): string {
+  if (err instanceof ApiError) return CREATOR_ERROR[err.code] ?? err.detail ?? err.message;
+  return fallback;
+}
+
+function toastError(err: unknown) {
+  toast.error(readError(err));
+}
+
 export default function CreatorSignupPage() {
+  const router = useRouter();
+  const {
+    signupCreatorStart,
+    signupCreatorVerify,
+    signupCreatorPassword,
+    user,
+  } = useAuth();
+
   const [step, setStep] = useState(1);
+  const [flowId, setFlowId] = useState<string | null>(null);
 
   // Step 1 state
   const [username, setUsername] = useState("");
@@ -39,15 +74,99 @@ export default function CreatorSignupPage() {
   const [age18, setAge18] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(true);
 
-  // Step 2 state
-  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  // Step 2 state — email OTP
+  const [emailOtp, setEmailOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   // Step 3 state
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
-  const next = () => setStep((s) => Math.min(4, s + 1));
-  const prev = () => setStep((s) => Math.max(1, s - 1));
+  const [busy, setBusy] = useState(false);
+
+  const goStep = (n: number) => setStep(n);
+
+  const submitAccount = async () => {
+    setBusy(true);
+    try {
+      const res = await signupCreatorStart({
+        username: username.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        referralCode: referral.trim() || undefined,
+      });
+      setFlowId(res.flowId);
+      toast.success(`Code sent to ${email.trim()}`);
+      goStep(2);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyOtp = async (code: string) => {
+    if (!flowId) return false;
+    try {
+      await signupCreatorVerify({ flowId, code });
+      setEmailVerified(true);
+      toast.success("Email verified");
+      goStep(3);
+      return true;
+    } catch (err) {
+      toastError(err);
+      return false;
+    }
+  };
+
+  const submitPassword = async () => {
+    if (!flowId) return;
+    setBusy(true);
+    try {
+      await signupCreatorPassword({ flowId, password });
+      toast.success("Account created");
+      goStep(4);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const finishSignup = () => {
+    router.replace(user ? postAuthRoute(user) : "/onboarding/creator");
+  };
+
+  const submitIdentity = async (idDoc: File | null, selfie: File | null) => {
+    if (!idDoc && !selfie) {
+      finishSignup();
+      return;
+    }
+    setBusy(true);
+    try {
+      const form = new FormData();
+      if (idDoc) form.append("id_doc", idDoc);
+      if (selfie) form.append("selfie", selfie);
+      if (flowId) form.append("flowId", flowId);
+      await authApi.signupCreatorIdentity(form);
+      toast.success("Identity submitted for review");
+      finishSignup();
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendOtp = useCallback(async () => {
+    if (!flowId) return;
+    try {
+      await authApi.resendOtp({ flowId, channel: "email" });
+      toast.success("New code sent");
+    } catch (err) {
+      toastError(err);
+    }
+  }, [flowId]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,51 +181,69 @@ export default function CreatorSignupPage() {
         <h1 className="text-[26px] font-semibold text-white tracking-tight">
           Create your creator account
         </h1>
-        <p className="text-sm text-white/55">
-          Step {step} of 4 · {STEPS[step - 1].label}
-        </p>
+        {step > 1 ? (
+          <p className="text-sm text-white/55">
+            Step {step} of 4 · {STEPS[step - 1].label}
+          </p>
+        ) : null}
       </div>
 
-      <Stepper current={step} />
+      {step > 1 ? <Stepper current={step} /> : null}
 
       {step === 1 ? (
-        <StepAccount
-          username={username}
-          setUsername={setUsername}
-          email={email}
-          setEmail={setEmail}
-          phone={phone}
-          setPhone={setPhone}
-          referral={referral}
-          setReferral={setReferral}
-          age18={age18}
-          setAge18={setAge18}
-          emailOptIn={emailOptIn}
-          setEmailOptIn={setEmailOptIn}
-          onContinue={next}
-        />
+        <>
+          <GoogleSignInButton
+            role="creator"
+            next="/onboarding/creator"
+            label="Continue with Google"
+          />
+          <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-white/40">
+            <div className="flex-1 divider" /> or <div className="flex-1 divider" />
+          </div>
+          <StepAccount
+            username={username}
+            setUsername={setUsername}
+            email={email}
+            setEmail={setEmail}
+            phone={phone}
+            setPhone={setPhone}
+            referral={referral}
+            setReferral={setReferral}
+            age18={age18}
+            setAge18={setAge18}
+            emailOptIn={emailOptIn}
+            setEmailOptIn={setEmailOptIn}
+            busy={busy}
+            onContinue={submitAccount}
+          />
+        </>
       ) : null}
+
       {step === 2 ? (
         <StepVerify
-          otp={otp}
-          setOtp={setOtp}
           email={email || "your email"}
-          phone={phone || "your phone"}
-          onBack={prev}
-          onContinue={next}
+          emailOtp={emailOtp}
+          setEmailOtp={setEmailOtp}
+          emailVerified={emailVerified}
+          onVerify={verifyOtp}
+          onResend={resendOtp}
+          onBack={() => goStep(1)}
         />
       ) : null}
+
       {step === 3 ? (
         <StepPassword
           password={password}
           setPassword={setPassword}
           confirm={confirm}
           setConfirm={setConfirm}
-          onBack={prev}
-          onContinue={next}
+          busy={busy}
+          onBack={() => goStep(2)}
+          onContinue={submitPassword}
         />
       ) : null}
-      {step === 4 ? <StepIdentity onBack={prev} /> : null}
+
+      {step === 4 ? <StepIdentity busy={busy} onSubmit={submitIdentity} onBack={() => goStep(3)} /> : null}
 
       <p className="text-sm text-white/55 text-center">
         Have an account?{" "}
@@ -164,6 +301,7 @@ function StepAccount({
   setAge18,
   emailOptIn,
   setEmailOptIn,
+  busy,
   onContinue,
 }: {
   username: string;
@@ -178,6 +316,7 @@ function StepAccount({
   setAge18: (v: boolean) => void;
   emailOptIn: boolean;
   setEmailOptIn: (v: boolean) => void;
+  busy: boolean;
   onContinue: () => void;
 }) {
   const valid =
@@ -194,39 +333,10 @@ function StepAccount({
         if (valid) onContinue();
       }}
     >
-      <Input
-        label="Username"
-        placeholder="alexokafor"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        leftIcon={<AtSign />}
-        autoComplete="username"
-      />
-      <Input
-        type="email"
-        label="Email"
-        placeholder="you@fanzyx.app"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        leftIcon={<Mail />}
-        autoComplete="email"
-      />
-      <Input
-        type="tel"
-        label="Phone number"
-        placeholder="+234 800 000 0000"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        leftIcon={<Phone />}
-        autoComplete="tel"
-      />
-      <Input
-        label="Referral code (optional)"
-        placeholder="Enter code"
-        value={referral}
-        onChange={(e) => setReferral(e.target.value)}
-        leftIcon={<Gift />}
-      />
+      <Input label="Username" placeholder="alexokafor" value={username} onChange={(e) => setUsername(e.target.value)} leftIcon={<AtSign />} autoComplete="username" />
+      <Input type="email" label="Email" placeholder="you@fanzyx.app" value={email} onChange={(e) => setEmail(e.target.value)} leftIcon={<Mail />} autoComplete="email" />
+      <Input type="tel" label="Phone number" placeholder="+234 800 000 0000" value={phone} onChange={(e) => setPhone(e.target.value)} leftIcon={<Phone />} autoComplete="tel" />
+      <Input label="Referral code (optional)" placeholder="Enter code" value={referral} onChange={(e) => setReferral(e.target.value)} leftIcon={<Gift />} />
 
       <LegalBlock
         age18={age18}
@@ -236,63 +346,108 @@ function StepAccount({
         variant="creator"
       />
 
-      <Button size="lg" className="w-full" disabled={!valid}>
-        Send verification code
+      <Button size="lg" className="w-full" disabled={!valid || busy}>
+        {busy ? "Sending code…" : "Send verification code"}
       </Button>
     </form>
   );
 }
 
-function StepVerify({
-  otp,
-  setOtp,
-  email,
-  phone,
-  onBack,
-  onContinue,
+function OtpInput({
+  value,
+  setValue,
+  disabled,
+  onComplete,
 }: {
-  otp: string[];
-  setOtp: (v: string[]) => void;
-  email: string;
-  phone: string;
-  onBack: () => void;
-  onContinue: () => void;
+  value: string[];
+  setValue: (v: string[]) => void;
+  disabled?: boolean;
+  onComplete?: (code: string) => void;
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
-  const complete = otp.every((d) => d.length === 1);
+
+  const fireIfComplete = (arr: string[]) => {
+    if (!onComplete) return;
+    const filled = arr.every((d) => d.length === 1);
+    if (filled) onComplete(arr.join(""));
+  };
 
   const handleChange = (i: number, val: string) => {
     const digit = val.replace(/\D/g, "").slice(-1);
-    const next = [...otp];
+    const next = [...value];
     next[i] = digit;
-    setOtp(next);
-    if (digit && i < otp.length - 1) refs.current[i + 1]?.focus();
+    setValue(next);
+    if (digit && i < value.length - 1) refs.current[i + 1]?.focus();
+    if (digit) fireIfComplete(next);
   };
 
   const handleKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !otp[i] && i > 0) {
+    if (e.key === "Backspace" && !value[i] && i > 0) {
       refs.current[i - 1]?.focus();
     }
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, otp.length);
+    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, value.length);
     if (!text) return;
     e.preventDefault();
-    const next = [...otp];
-    for (let i = 0; i < otp.length; i++) next[i] = text[i] ?? "";
-    setOtp(next);
-    refs.current[Math.min(text.length, otp.length - 1)]?.focus();
+    const next = [...value];
+    for (let i = 0; i < value.length; i++) next[i] = text[i] ?? "";
+    setValue(next);
+    refs.current[Math.min(text.length, value.length - 1)]?.focus();
+    fireIfComplete(next);
   };
 
   return (
-    <form
-      className="flex flex-col gap-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (complete) onContinue();
-      }}
-    >
+    <div className="flex justify-between gap-2" onPaste={handlePaste}>
+      {value.map((d, i) => (
+        <input
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          value={d}
+          disabled={disabled}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={1}
+          className="w-11 h-12 rounded-[12px] bg-white/[0.04] hairline text-center text-lg font-semibold text-white outline-none focus:border-white/30 focus:bg-white/[0.06] transition-colors disabled:opacity-60"
+        />
+      ))}
+    </div>
+  );
+}
+
+function StepVerify({
+  email,
+  emailOtp,
+  setEmailOtp,
+  emailVerified,
+  onVerify,
+  onResend,
+  onBack,
+}: {
+  email: string;
+  emailOtp: string[];
+  setEmailOtp: (v: string[]) => void;
+  emailVerified: boolean;
+  onVerify: (code: string) => Promise<boolean>;
+  onResend: () => Promise<void>;
+  onBack: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (code: string) => {
+    if (code.length !== 6 || busy || emailVerified) return;
+    setBusy(true);
+    await onVerify(code);
+    setBusy(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center text-center gap-3">
         <span className="inline-flex items-center justify-center size-12 rounded-full bg-gradient-brand-soft border border-white/10">
           <ShieldCheck className="size-5 text-white" />
@@ -300,46 +455,79 @@ function StepVerify({
         <div>
           <h2 className="text-lg font-semibold text-white">Verify it&apos;s you</h2>
           <p className="text-sm text-white/55 mt-1">
-            We sent a 6-digit code to <span className="text-white/80">{email}</span> and{" "}
-            <span className="text-white/80">{phone}</span>.
+            We sent a 6-digit code to <span className="text-white/80">{email}</span>.
           </p>
         </div>
       </div>
 
-      <div className="flex justify-between gap-2" onPaste={handlePaste}>
-        {otp.map((d, i) => (
-          <input
-            key={i}
-            ref={(el) => {
-              refs.current[i] = el;
-            }}
-            value={d}
-            onChange={(e) => handleChange(i, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(i, e)}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={1}
-            className="w-12 h-14 rounded-[12px] bg-white/[0.04] hairline text-center text-xl font-semibold text-white outline-none focus:border-white/30 focus:bg-white/[0.06] transition-colors"
-          />
-        ))}
-      </div>
+      <OtpCard
+        label={`Email code · sent to ${email}`}
+        verified={emailVerified}
+        value={emailOtp}
+        setValue={setEmailOtp}
+        onVerify={submit}
+        onResend={onResend}
+        busy={busy}
+        disabled={emailVerified}
+      />
 
-      <button
-        type="button"
-        className="text-xs text-white/60 hover:text-white text-center"
-      >
-        Didn&apos;t get a code? <span className="text-white underline underline-offset-4">Resend</span>
-      </button>
+      <Button variant="secondary" size="lg" onClick={onBack} type="button" leftIcon={<ArrowLeft />}>
+        Back
+      </Button>
+    </div>
+  );
+}
 
+function OtpCard({
+  label,
+  verified,
+  value,
+  setValue,
+  onVerify,
+  onResend,
+  busy,
+  disabled,
+}: {
+  label: string;
+  verified: boolean;
+  value: string[];
+  setValue: (v: string[]) => void;
+  onVerify: (code: string) => void;
+  onResend: () => Promise<void>;
+  busy: boolean;
+  disabled?: boolean;
+}) {
+  const complete = value.every((d) => d.length === 1);
+  return (
+    <div className="rounded-[14px] hairline bg-white/[0.02] p-4 flex flex-col gap-3">
+      <span className="text-xs text-white/60">{label}</span>
+      <OtpInput
+        value={value}
+        setValue={setValue}
+        disabled={disabled || busy}
+        onComplete={(code) => {
+          if (!verified && !busy) onVerify(code);
+        }}
+      />
       <div className="flex items-center gap-2">
-        <Button variant="secondary" size="lg" onClick={onBack} type="button" leftIcon={<ArrowLeft />}>
-          Back
-        </Button>
-        <Button size="lg" className="flex-1" disabled={!complete}>
-          Verify
+        <button
+          type="button"
+          className="text-[11px] text-white/60 hover:text-white"
+          onClick={onResend}
+          disabled={verified}
+        >
+          Resend
+        </button>
+        <div className="flex-1" />
+        <Button
+          size="md"
+          onClick={() => onVerify(value.join(""))}
+          disabled={!complete || busy || verified}
+        >
+          {verified ? "Verified" : busy ? "Verifying…" : "Verify"}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
 
@@ -348,6 +536,7 @@ function StepPassword({
   setPassword,
   confirm,
   setConfirm,
+  busy,
   onBack,
   onContinue,
 }: {
@@ -355,6 +544,7 @@ function StepPassword({
   setPassword: (v: string) => void;
   confirm: string;
   setConfirm: (v: string) => void;
+  busy: boolean;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -422,15 +612,23 @@ function StepPassword({
         <Button variant="secondary" size="lg" onClick={onBack} type="button" leftIcon={<ArrowLeft />}>
           Back
         </Button>
-        <Button size="lg" className="flex-1" disabled={!valid}>
-          Continue
+        <Button size="lg" className="flex-1" disabled={!valid || busy}>
+          {busy ? "Saving…" : "Continue"}
         </Button>
       </div>
     </form>
   );
 }
 
-function StepIdentity({ onBack }: { onBack: () => void }) {
+function StepIdentity({
+  busy,
+  onSubmit,
+  onBack,
+}: {
+  busy: boolean;
+  onSubmit: (idDoc: File | null, selfie: File | null) => void;
+  onBack: () => void;
+}) {
   const [idFile, setIdFile] = useState<File | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
 
@@ -465,14 +663,24 @@ function StepIdentity({ onBack }: { onBack: () => void }) {
       />
 
       <div className="flex flex-col gap-2 mt-1">
-        <Button href="/onboarding/creator" size="lg" className="w-full">
-          {idFile || selfieFile ? "Submit for review" : "Continue"}
+        <Button
+          size="lg"
+          className="w-full"
+          onClick={() => onSubmit(idFile, selfieFile)}
+          disabled={busy}
+        >
+          {busy ? "Uploading…" : idFile || selfieFile ? "Submit for review" : "Continue"}
         </Button>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="md" onClick={onBack} type="button" leftIcon={<ArrowLeft />}>
             Back
           </Button>
-          <Button href="/onboarding/creator" variant="ghost" size="md" className="flex-1">
+          <Button
+            variant="ghost"
+            size="md"
+            className="flex-1"
+            onClick={() => onSubmit(null, null)}
+          >
             Skip for now
           </Button>
         </div>

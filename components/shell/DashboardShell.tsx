@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   Bell,
   Bookmark,
@@ -11,6 +12,8 @@ import {
   HelpCircle,
   Home,
   LayoutDashboard,
+  LogOut,
+  MailCheck,
   Megaphone,
   Menu,
   MessageSquare,
@@ -27,8 +30,9 @@ import {
 import { Logo } from "@/components/brand/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { PageTransition } from "@/components/PageTransition";
+import { useEmailVerify } from "@/components/auth/EmailVerifyManager";
+import { useAuth } from "@/services/context";
 import { cn } from "@/lib/utils";
-import { currentCreator } from "@/lib/mock-data";
 
 type NavItem = {
   href: string;
@@ -42,7 +46,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const creatorNav: NavGroup[] = [
+const buildCreatorNav = (username: string): NavGroup[] => [
   {
     items: [
       { href: "/dashboard", label: "Home", icon: Home },
@@ -54,7 +58,7 @@ const creatorNav: NavGroup[] = [
   {
     title: "Quick Access",
     items: [
-      { href: `/creator/${currentCreator.username}`, label: "My Profile", icon: UserRound },
+      { href: `/creator/${username}`, label: "My Profile", icon: UserRound },
       { href: "/dashboard/bookmarks", label: "Bookmarks", icon: Bookmark },
     ],
   },
@@ -124,7 +128,34 @@ export function DashboardShell({
 }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const groups = variant === "creator" ? creatorNav : fanNav;
+  const [loggingOut, setLoggingOut] = useState(false);
+  const { user, logout } = useAuth();
+  const emailVerify = useEmailVerify();
+  const needsEmailVerify = !!user && user.emailVerifiedAt === null && !!user.email;
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      toast.success("Signed out");
+    } catch {
+      toast.error("Couldn't sign out");
+      setLoggingOut(false);
+      return;
+    }
+    // Hard nav — avoids the AuthGate race that would otherwise append ?next=…
+    window.location.href = "/login";
+  };
+
+  const displayName = user?.displayName || user?.username || "You";
+  const usernameHandle = user?.username ?? "you";
+  const avatarUrl = user?.avatarUrl ?? undefined;
+  const brandGradient =
+    "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)";
+
+  const groups =
+    variant === "creator" ? buildCreatorNav(usernameHandle) : fanNav;
   const prefs = preferencesGroup(variant);
   const flat = groups.flatMap((g) => g.items);
 
@@ -155,29 +186,62 @@ export function DashboardShell({
           <NightModeSwitch />
         </div>
 
+        {needsEmailVerify ? (
+          <button
+            type="button"
+            onClick={emailVerify.open}
+            className="mt-3 flex items-center gap-2.5 rounded-[12px] hairline bg-gradient-brand-soft px-3 py-2.5 text-left hover:bg-white/[0.06] transition-colors"
+          >
+            <span className="inline-flex items-center justify-center size-7 rounded-full bg-white/10 text-white shrink-0">
+              <MailCheck className="size-3.5" />
+            </span>
+            <span className="flex flex-col min-w-0 leading-tight">
+              <span className="text-[13px] font-medium text-white truncate">
+                Verify your email
+              </span>
+              <span className="text-[11px] text-white/60 truncate">
+                Tap to send a verification link
+              </span>
+            </span>
+          </button>
+        ) : null}
+
         {/* Profile card — pinned at the bottom */}
         <div className="mt-3 surface-card p-4">
           <div className="flex items-center gap-3">
             <Avatar
-              name={currentCreator.name}
-              gradient={currentCreator.avatarGradient}
+              name={displayName}
+              gradient={brandGradient}
+              image={avatarUrl}
               size={40}
             />
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-medium text-white truncate">
-                {currentCreator.name}
+                {displayName}
               </span>
               <span className="text-xs text-white/50 truncate">
-                @{currentCreator.username}
+                @{usernameHandle}
               </span>
             </div>
-            <Link
-              href={variant === "creator" ? "/dashboard/settings" : "/settings"}
-              className="ml-auto inline-flex items-center justify-center size-8 rounded-full text-white/60 hover:text-white hover:bg-white/[0.06]"
-              aria-label="Settings"
-            >
-              <Settings className="size-4" />
-            </Link>
+            <div className="ml-auto flex items-center gap-1">
+              <Link
+                href={variant === "creator" ? "/dashboard/settings" : "/settings"}
+                className="inline-flex items-center justify-center size-8 rounded-full text-white/60 hover:text-white hover:bg-white/[0.06]"
+                aria-label="Settings"
+              >
+                <Settings className="size-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                aria-label="Log out"
+                title="Log out"
+                className="inline-flex items-center justify-center size-8 rounded-full text-white/60 hover:text-red-300 hover:bg-red-500/10 disabled:opacity-60"
+              >
+                <LogOut className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -210,8 +274,9 @@ export function DashboardShell({
                 className="inline-block"
               >
                 <Avatar
-                  name={currentCreator.name}
-                  gradient={currentCreator.avatarGradient}
+                  name={displayName}
+                  gradient={brandGradient}
+                  image={avatarUrl}
                   size={36}
                 />
               </Link>
