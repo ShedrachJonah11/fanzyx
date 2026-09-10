@@ -1,10 +1,14 @@
 import { AuthGate } from "@/components/auth/AuthGate";
 import { MessagesShell } from "@/components/messaging/MessagesShell";
 
-export default function MessagesLayout({ children }: LayoutProps<"/messages">) {
+export default function DashboardMessagesLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <AuthGate>
-      <MessagesShell basePath="/messages" variant="fan">
+      <MessagesShell basePath="/dashboard/messages" variant="creator">
         {children}
       </MessagesShell>
     </AuthGate>

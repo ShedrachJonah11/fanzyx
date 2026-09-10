@@ -1,10 +1,4 @@
-import { DashboardShell } from "@/components/shell/DashboardShell";
-import { MessagesView } from "@/components/messages/MessagesView";
-
+// Layout handles the list + empty-state slot when no conversation is open.
 export default function FanMessagesPage() {
-  return (
-    <DashboardShell variant="fan">
-      <MessagesView />
-    </DashboardShell>
-  );
+  return null;
 }

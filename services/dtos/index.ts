@@ -11,3 +11,4 @@ export * from "./discover";
 export * from "./stories";
 export * from "./subscriptions";
 export * from "./payouts";
+export * from "./messages";

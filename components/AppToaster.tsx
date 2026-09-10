@@ -29,7 +29,6 @@ export function AppToaster() {
       theme={theme}
       offset={20}
       gap={10}
-      closeButton
       duration={3500}
       visibleToasts={4}
     />

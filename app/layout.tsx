@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppToaster } from "@/components/AppToaster";
 import { EmailVerifyManager } from "@/components/auth/EmailVerifyManager";
 import { AuthProvider } from "@/services/context";
+import { MessagingProvider } from "@/components/messaging/MessagingProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -58,7 +59,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full bg-app text-app flex flex-col" suppressHydrationWarning>
         <AuthProvider>
-          <EmailVerifyManager>{children}</EmailVerifyManager>
+          <MessagingProvider>
+            <EmailVerifyManager>{children}</EmailVerifyManager>
+          </MessagingProvider>
         </AuthProvider>
         <AppToaster />
       </body>

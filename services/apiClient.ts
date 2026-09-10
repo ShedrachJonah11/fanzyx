@@ -152,7 +152,7 @@ function redirectToLogin() {
   window.location.href = `${LOGIN_PATH}?next=${encodeURIComponent(next)}`;
 }
 
-async function refreshAccessToken(): Promise<TokenPair | null> {
+export async function refreshAccessToken(): Promise<TokenPair | null> {
   if (refreshInFlight) return refreshInFlight;
 
   const refreshToken = tokenStore.getRefresh();

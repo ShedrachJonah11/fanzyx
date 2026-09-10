@@ -268,6 +268,24 @@ html.light .only-light { display: initial; }
   animation: shine 2.8s ease-in-out infinite;
 }
 
+/* Typing indicator dots — bounce sequentially. Each dot inside a
+   `.typing-dots` container carries its own delay so the three bounce in
+   a wave. */
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+.typing-dots > span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dots > span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots > span:nth-child(3) { animation-delay: 0.3s; }
+
 /* Skeleton loader — subtle shimmer across an rgba block. */
 @keyframes skeleton-shimmer {
   0% { background-position: -200% 0; }
@@ -293,7 +311,8 @@ html.light .only-light { display: initial; }
   .animate-shine,
   .skeleton-block,
   .surface-card-brand,
-  .brand-border-flash {
+  .brand-border-flash,
+  .typing-dots > span {
     animation: none !important;
   }
 }
