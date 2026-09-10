@@ -11,3 +11,5 @@ export * from "./twoFactor";
 export * from "./dashboard";
 export * from "./discover";
 export * from "./stories";
+export * from "./subscriptions";
+export * from "./payouts";

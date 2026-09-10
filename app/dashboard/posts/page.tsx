@@ -7,7 +7,6 @@ import {
   Calendar,
   Check,
   ExternalLink,
-  ImagePlus,
   MoreHorizontal,
   Plus,
   Send,
@@ -18,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { posts as postsApi, type MinePostsStatus } from "@/services/modules/posts";
 import { ApiError } from "@/services/apiClient";
 import type { PostOut, PostStatus } from "@/services/dtos";
@@ -161,26 +161,28 @@ export default function PostsPage() {
             ))}
           </ul>
         ) : items.length === 0 && initialLoaded && !loading ? (
-          <div className="p-14 text-center flex flex-col items-center gap-3">
-            <div className="size-12 rounded-full bg-white/[0.05] hairline flex items-center justify-center">
-              <ImagePlus className="size-5 text-white/70" />
-            </div>
-            <h3 className="text-lg font-semibold text-white">
-              {tab === "drafts"
+          <EmptyState
+            className="!bg-transparent !border-none"
+            title={
+              tab === "drafts"
                 ? "No drafts yet"
                 : tab === "scheduled"
                 ? "Nothing scheduled"
                 : tab === "published"
                 ? "No published posts yet"
-                : "You haven't posted yet"}
-            </h3>
-            <p className="text-sm text-white/55 max-w-sm">
-              Publish your first post to start earning.
-            </p>
-            <Button href="/dashboard/posts/new" leftIcon={<Plus />} size="sm" className="mt-1">
-              New post
-            </Button>
-          </div>
+                : "You haven't posted yet"
+            }
+            body="Publish your first post to start earning."
+            action={
+              <Button
+                href="/dashboard/posts/new"
+                leftIcon={<Plus />}
+                size="sm"
+              >
+                New post
+              </Button>
+            }
+          />
         ) : (
           <ul>
             {items.map((p) => (

@@ -9,6 +9,7 @@ import { PostCard, PostFeedSkeleton } from "@/components/PostCard";
 import { FeedTabs } from "@/components/feed/FeedTabs";
 import { CreatorRail } from "@/components/creator/CreatorRail";
 import { Avatar } from "@/components/ui/Avatar";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { StoryTray } from "@/components/stories/StoryTray";
 import { StoryCreator } from "@/components/stories/StoryCreator";
 import { feed } from "@/services/modules/feed";
@@ -199,16 +200,14 @@ export default function DashboardHomePage() {
             ) : null}
 
             {!loading && current.loaded && current.items.length === 0 ? (
-              <div className="surface-card p-14 text-center flex flex-col gap-2">
-                <h3 className="text-white font-medium">
-                  {tab === "following"
+              <EmptyState
+                title={
+                  tab === "following"
                     ? "Follow creators to fill this feed"
-                    : "Nothing to show yet"}
-                </h3>
-                <p className="text-sm text-white/55">
-                  Publish a post or explore new creators to get started.
-                </p>
-              </div>
+                    : "Nothing to show yet"
+                }
+                body="Publish a post or explore new creators to get started."
+              />
             ) : null}
 
             {!current.hasMore && current.items.length > 0 ? (

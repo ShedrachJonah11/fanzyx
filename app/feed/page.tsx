@@ -8,6 +8,7 @@ import { FeedRightRail } from "@/components/feed/FeedRightRail";
 import { FeedTabs } from "@/components/feed/FeedTabs";
 import { FeaturedCreators } from "@/components/featured/FeaturedCreators";
 import { StoryTray } from "@/components/stories/StoryTray";
+import { EmptyState as FeedEmpty } from "@/components/ui/EmptyState";
 import { feed } from "@/services/modules/feed";
 import { useStoriesFeed } from "@/services/hooks/stories";
 import { useAuth } from "@/services/context";
@@ -249,12 +250,7 @@ function EmptyState({ tab }: { tab: Tab }) {
         };
     }
   }, [tab]);
-  return (
-    <div className="surface-card p-14 text-center flex flex-col gap-2">
-      <h3 className="text-white font-medium">{copy.title}</h3>
-      <p className="text-sm text-white/55">{copy.body}</p>
-    </div>
-  );
+  return <FeedEmpty title={copy.title} body={copy.body} />;
 }
 
 function dedupe(list: PostOut[]): PostOut[] {

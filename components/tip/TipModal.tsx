@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/services/context";
 import { toast } from "sonner";
 import { DollarSign, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -55,6 +56,7 @@ export function TipModal({
   onSent?: () => void;
 }) {
   const router = useRouter();
+  const { user } = useAuth();
   const [balance, setBalance] = useState<WalletOut | null>(null);
   const [amountKobo, setAmountKobo] = useState<number | null>(null);
   const [customOn, setCustomOn] = useState(false);
@@ -114,7 +116,7 @@ export function TipModal({
 
   const topUp = () => {
     onClose();
-    router.push("/wallet");
+    router.push(user?.role === "creator" ? "/dashboard/earnings" : "/wallet");
   };
 
   const send = async () => {

@@ -3,12 +3,11 @@
 import { DashboardShell } from "@/components/shell/DashboardShell";
 import { TransactionsView } from "@/components/wallet/TransactionsView";
 
-export default function TransactionsPage() {
+export default function DashboardTransactionsPage() {
   return (
     <DashboardShell
-      variant="fan"
       title="Transactions"
-      subtitle="Everything that's moved through your wallet."
+      subtitle="Every credit and debit on your wallet."
     >
       <TransactionsView />
     </DashboardShell>

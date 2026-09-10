@@ -66,7 +66,8 @@ const buildCreatorNav = (username: string): NavGroup[] => [
   {
     title: "Finance",
     items: [
-      { href: "/dashboard/earnings", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard/earnings", label: "Earnings", icon: LayoutDashboard },
+      { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
       { href: "/dashboard/subscribers", label: "Subscribers", icon: Users },
       { href: "/dashboard/referrals", label: "Referrals", icon: Gift },
       { href: "/dashboard/campaigns", label: "Campaign", icon: Megaphone },

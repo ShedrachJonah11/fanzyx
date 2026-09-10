@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Bookmark } from "lucide-react";
 import { DashboardShell } from "@/components/shell/DashboardShell";
 import { PostCard, PostFeedSkeleton } from "@/components/PostCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { posts as postsApi } from "@/services/modules/posts";
 import { ApiError } from "@/services/apiClient";
 import type { PostOut } from "@/services/dtos";
@@ -99,15 +99,10 @@ export default function BookmarksPage() {
           <PostFeedSkeleton count={2} />
         </div>
       ) : items.length === 0 && initialLoaded && !loading ? (
-        <div className="surface-card p-14 text-center flex flex-col items-center gap-3">
-          <div className="size-12 rounded-full bg-white/[0.05] hairline flex items-center justify-center">
-            <Bookmark className="size-5 text-white/70" />
-          </div>
-          <h3 className="text-lg font-semibold text-white">No bookmarks yet</h3>
-          <p className="text-sm text-white/55 max-w-sm">
-            Tap the bookmark icon on any post to save it here for later.
-          </p>
-        </div>
+        <EmptyState
+          title="No bookmarks yet"
+          body="Tap the bookmark icon on any post to save it here for later."
+        />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {items.map((p) => (
