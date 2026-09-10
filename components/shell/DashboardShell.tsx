@@ -33,6 +33,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { PageTransition } from "@/components/PageTransition";
 import { useEmailVerify } from "@/components/auth/EmailVerifyManager";
 import { useAuth } from "@/services/context";
+import { useMessagingStore } from "@/services/stores/messaging";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -51,8 +52,9 @@ const buildCreatorNav = (username: string): NavGroup[] => [
   {
     items: [
       { href: "/dashboard", label: "Home", icon: Home },
-      { href: "/dashboard/streaming", label: "Streamings", icon: Radio },
-      { href: "/dashboard/messages", label: "Messages", icon: MessageSquare, badge: 1 },
+      // Streamings — hidden until the feature is built.
+      // { href: "/dashboard/streaming", label: "Streamings", icon: Radio },
+      { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
       { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
     ],
   },
@@ -70,7 +72,8 @@ const buildCreatorNav = (username: string): NavGroup[] => [
       { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
       { href: "/dashboard/subscribers", label: "Subscribers", icon: Users },
       { href: "/dashboard/referrals", label: "Referrals", icon: Gift },
-      { href: "/dashboard/campaigns", label: "Campaign", icon: Megaphone },
+      // Campaigns — hidden until the feature is built.
+      // { href: "/dashboard/campaigns", label: "Campaign", icon: Megaphone },
     ],
   },
 ];
@@ -81,6 +84,7 @@ const fanNav: NavGroup[] = [
       { href: "/feed", label: "Home", icon: Home },
       { href: "/subscriptions", label: "Subscriptions", icon: Heart },
       { href: "/messages", label: "Messages", icon: MessageSquare },
+      { href: "/notifications", label: "Notifications", icon: Bell },
       { href: "/saved", label: "Saved", icon: Bookmark },
     ],
   },
@@ -156,8 +160,22 @@ export function DashboardShell({
   const brandGradient =
     "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)";
 
-  const groups =
+  const totalUnread = useMessagingStore((s) =>
+    Object.values(s.conversations).reduce((n, c) => n + (c.unreadCount || 0), 0)
+  );
+
+  const rawGroups =
     variant === "creator" ? buildCreatorNav(usernameHandle) : fanNav;
+  const messagesHref =
+    variant === "creator" ? "/dashboard/messages" : "/messages";
+  const groups = rawGroups.map((g) => ({
+    ...g,
+    items: g.items.map((item) =>
+      item.href === messagesHref && totalUnread > 0
+        ? { ...item, badge: totalUnread }
+        : item
+    ),
+  }));
   const prefs = preferencesGroup(variant);
   const flat = groups.flatMap((g) => g.items);
 
@@ -264,7 +282,7 @@ export function DashboardShell({
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href={variant === "creator" ? "/dashboard/notifications" : "/feed"}
+                href={variant === "creator" ? "/dashboard/notifications" : "/notifications"}
                 className="inline-flex items-center justify-center size-10 rounded-full text-white/70 hover:text-white hover:bg-white/[0.06] relative"
                 aria-label="Notifications"
               >

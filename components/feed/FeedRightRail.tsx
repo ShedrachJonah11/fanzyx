@@ -96,7 +96,7 @@ export function FeedRightRail() {
   }, [loadMore]);
 
   return (
-    <aside className="hidden lg:flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 [scrollbar-width:thin]">
+    <aside className="hidden lg:flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-white/40" />
         <input

@@ -62,6 +62,12 @@ export const messages = {
 
   deleteConversation: (convId: string) =>
     apiClient.delete<Ok>(`/v1/conversations/${convId}`),
+
+  /** PPV — pays the price and returns the full unlocked message. */
+  unlock: (messageId: string, idempotencyKey: string) =>
+    apiClient.post<MessageOut>(`/v1/messages/${messageId}/unlock`, undefined, {
+      idempotencyKey,
+    }),
 };
 
 export const presence = {

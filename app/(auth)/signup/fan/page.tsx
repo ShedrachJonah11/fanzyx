@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, AtSign, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -25,17 +25,23 @@ export default function FanSignupPage() {
   const router = useRouter();
   const { signupFan } = useAuth();
 
+  const initialFromUrl = () => {
+    if (typeof window === "undefined") return { email: "", ref: "" };
+    const params = new URLSearchParams(window.location.search);
+    return {
+      email: params.get("email") ?? "",
+      ref: params.get("ref")?.trim() ?? "",
+    };
+  };
+  const initial = useState(initialFromUrl)[0];
+
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initial.email);
   const [password, setPassword] = useState("");
   const [age18, setAge18] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(true);
+  const [referralCode] = useState(initial.ref);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    const prefill = new URLSearchParams(window.location.search).get("email");
-    if (prefill) setEmail(prefill);
-  }, []);
 
   const valid =
     username.trim().length >= 3 &&
@@ -63,6 +69,7 @@ export default function FanSignupPage() {
           password,
           age18: true,
           emailOptin: emailOptIn,
+          referralCode: referralCode.trim() || undefined,
         });
         toast.success("Account created — welcome to FanzyX");
         router.replace(postAuthRoute(user));
@@ -72,7 +79,16 @@ export default function FanSignupPage() {
         setSubmitting(false);
       }
     },
-    [valid, signupFan, username, email, password, emailOptIn, router]
+    [
+      valid,
+      signupFan,
+      username,
+      email,
+      password,
+      emailOptIn,
+      referralCode,
+      router,
+    ]
   );
 
   return (
@@ -130,6 +146,21 @@ export default function FanSignupPage() {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
         />
+
+        {referralCode ? (
+          <div className="rounded-[10px] bg-white/[0.04] hairline px-3 py-2 text-[12px] text-white/70 flex items-center gap-2">
+            <span className="inline-flex items-center justify-center size-5 rounded-full bg-gradient-brand text-white on-media text-[10px] font-bold">
+              ✓
+            </span>
+            <span>
+              Referral code{" "}
+              <span className="font-semibold text-white font-mono">
+                {referralCode}
+              </span>{" "}
+              applied
+            </span>
+          </div>
+        ) : null}
 
         <LegalBlock
           age18={age18}

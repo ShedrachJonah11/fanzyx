@@ -18,6 +18,8 @@ type Props = {
   title?: string;
   /** Render the crop area as a circle (avatars). */
   circle?: boolean;
+  /** Modal + stage size. Use "lg" for wide aspects (cover). Default "md". */
+  size?: "md" | "lg";
 };
 
 const MIN_ZOOM = 1;
@@ -40,6 +42,7 @@ export function ImageCropper({
   onClose,
   title,
   circle,
+  size = "md",
 }: Props) {
   // Object URL — created + revoked inside effect so strict-mode remounts
   // always own a valid blob.
@@ -112,7 +115,10 @@ export function ImageCropper({
         role="dialog"
         aria-modal
         aria-label={title ?? "Adjust image"}
-        className="relative w-full max-w-lg rounded-[20px] overflow-hidden surface-card flex flex-col max-h-[92dvh]"
+        className={
+          "relative w-full rounded-[20px] overflow-hidden surface-card flex flex-col max-h-[92dvh] " +
+          (size === "lg" ? "max-w-3xl" : "max-w-lg")
+        }
       >
         <div className="flex items-start justify-between px-5 pt-5 pb-4 gap-3">
           <div className="min-w-0">
@@ -136,8 +142,13 @@ export function ImageCropper({
           </button>
         </div>
 
-        {/* Cropper stage — fixed 320px tall, black background */}
-        <div className="relative w-full h-[360px] bg-black">
+        {/* Cropper stage — taller on lg so wide aspects get real estate. */}
+        <div
+          className={
+            "relative w-full bg-black " +
+            (size === "lg" ? "h-[460px]" : "h-[360px]")
+          }
+        >
           {imgUrl ? (
             <Cropper
               image={imgUrl}

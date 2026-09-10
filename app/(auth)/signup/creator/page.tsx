@@ -70,7 +70,12 @@ export default function CreatorSignupPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [referral, setReferral] = useState("");
+  const [referral, setReferral] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return (
+      new URLSearchParams(window.location.search).get("ref")?.trim() || ""
+    );
+  });
   const [age18, setAge18] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(true);
 

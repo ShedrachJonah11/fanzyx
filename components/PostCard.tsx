@@ -382,17 +382,21 @@ function PostMediaBlock({
   const hasMedia = !!first;
   const extraCount = Math.max(0, post.media.length - 1);
 
-  // Locked posts have no media dimensions — use a fixed placeholder aspect.
+  // Locked posts have no media dimensions.
   if (post.locked) {
-    return (
-      <div className="relative mx-4 mb-1 aspect-[4/5] sm:aspect-[16/10] rounded-[14px] overflow-hidden hairline bg-black">
-        <div
-          className="absolute inset-0"
-          style={{ backgroundImage: BRAND_GRADIENT, opacity: 0.5 }}
-        />
-        <LockedOverlay post={post} onUnlocked={onUnlocked} />
-      </div>
-    );
+    const isPpv = post.unlock?.kind === "ppv";
+    if (isPpv) {
+      return (
+        <div className="relative mx-4 mb-1 aspect-[4/5] sm:aspect-[16/10] rounded-[14px] overflow-hidden hairline bg-black">
+          <div
+            className="absolute inset-0"
+            style={{ backgroundImage: BRAND_GRADIENT, opacity: 0.5 }}
+          />
+          <LockedOverlay post={post} onUnlocked={onUnlocked} />
+        </div>
+      );
+    }
+    return <SubscribeGate post={post} />;
   }
 
   if (!hasMedia) {
@@ -529,6 +533,30 @@ function MediaRenderer({ media }: { media: MediaOut }) {
         sizes="(max-width: 640px) 100vw, 640px"
         className="object-contain"
       />
+    </div>
+  );
+}
+
+function SubscribeGate({ post }: { post: PostOut }) {
+  return (
+    <div className="mx-4 mb-1 rounded-[14px] overflow-hidden hairline bg-white/[0.03] flex flex-col">
+      <div className="flex-1 flex items-center justify-center py-14 px-6 min-h-[240px]">
+        <div className="size-24 rounded-full bg-white/[0.06] flex items-center justify-center">
+          <Lock
+            className="size-8 text-white/50"
+            strokeWidth={1.5}
+            aria-hidden
+          />
+        </div>
+      </div>
+      <div className="p-3">
+        <Link
+          href={`/creator/${post.creator.username}#plans`}
+          className="w-full inline-flex items-center justify-center rounded-full py-3 bg-gradient-brand text-white on-media font-bold uppercase tracking-wide text-[13px] hover:opacity-95 transition-opacity"
+        >
+          Subscribe to see full content
+        </Link>
+      </div>
     </div>
   );
 }

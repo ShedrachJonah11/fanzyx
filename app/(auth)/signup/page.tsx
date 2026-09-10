@@ -8,7 +8,12 @@ export default async function SignupChoicePage({
   const params = await searchParams;
   const rawEmail = params?.email;
   const email = typeof rawEmail === "string" ? rawEmail : undefined;
-  const q = email ? `?email=${encodeURIComponent(email)}` : "";
+  const rawRef = params?.ref;
+  const ref = typeof rawRef === "string" ? rawRef : undefined;
+  const qs = new URLSearchParams();
+  if (email) qs.set("email", email);
+  if (ref) qs.set("ref", ref);
+  const q = qs.toString() ? `?${qs.toString()}` : "";
 
   return (
     <div className="flex flex-col gap-6">

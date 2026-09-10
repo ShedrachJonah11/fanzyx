@@ -9,12 +9,22 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArrowLeft, Check, CheckCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  ImageIcon,
+  Lock,
+  Video,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { VerifiedBadge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { Composer } from "./Composer";
 import { ConversationMenu } from "./ConversationMenu";
+import { AttachmentRenderer } from "./AttachmentRenderer";
 import { useMessagingStore, type LocalMessage } from "@/services/stores/messaging";
 import { messages as messagesApi } from "@/services/modules/messages";
 import { ApiError } from "@/services/apiClient";
@@ -122,8 +132,36 @@ export function ThreadView({ convId, backPath }: Props) {
 
   const removeLocalMessage = useMessagingStore((s) => s.removeLocalMessage);
   const resendMessage = useMessagingStore((s) => s.resendMessage);
+  const unlockMessageAction = useMessagingStore((s) => s.unlockMessage);
 
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [unlockTarget, setUnlockTarget] = useState<LocalMessage | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
+
+  const confirmUnlock = async () => {
+    if (!unlockTarget || unlocking) return;
+    setUnlocking(true);
+    try {
+      await unlockMessageAction(convId, unlockTarget.id);
+      setUnlockTarget(null);
+    } catch (e) {
+      if (e instanceof ApiError) {
+        if (e.code === "insufficient_funds")
+          toast.error("Not enough wallet balance to unlock.");
+        else if (e.code === "self_unlock")
+          toast.error("You can't unlock your own message.");
+        else if (e.code === "not_paid_message")
+          toast.error("This message isn't a paid message.");
+        else if (e.code === "message_not_found")
+          toast.error("Message no longer exists.");
+        else toast.error(e.detail ?? "Couldn't unlock");
+      } else {
+        toast.error("Couldn't unlock");
+      }
+    } finally {
+      setUnlocking(false);
+    }
+  };
   const deleteMessage = async (msg: LocalMessage) => {
     if (deleting) return;
     // Failed / still-sending messages have no server row — remove locally,
@@ -244,6 +282,7 @@ export function ThreadView({ convId, backPath }: Props) {
               readUpTo={readUpTo}
               onDelete={() => deleteMessage(m)}
               onResend={() => handleResend(m)}
+              onUnlock={() => setUnlockTarget(m)}
               deleting={deleting === m.id}
             />
           ))
@@ -258,6 +297,36 @@ export function ThreadView({ convId, backPath }: Props) {
       <div className="border-t border-white/[0.05] p-3 shrink-0">
         <Composer convId={convId} />
       </div>
+
+      <Modal
+        open={!!unlockTarget}
+        onClose={() => (unlocking ? null : setUnlockTarget(null))}
+        title="Unlock this message?"
+        size="sm"
+      >
+        <p className="text-sm text-white/70">
+          You&apos;ll be charged{" "}
+          <span className="text-white font-semibold">
+            ₦
+            {unlockTarget?.priceKobo
+              ? (unlockTarget.priceKobo / 100).toLocaleString("en-NG")
+              : "0"}
+          </span>{" "}
+          from your wallet to reveal this message.
+        </p>
+        <div className="flex items-center justify-end gap-2 mt-6">
+          <Button
+            variant="secondary"
+            onClick={() => setUnlockTarget(null)}
+            disabled={unlocking}
+          >
+            Cancel
+          </Button>
+          <Button onClick={confirmUnlock} disabled={unlocking}>
+            {unlocking ? "Unlocking…" : "Unlock"}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -268,6 +337,7 @@ function MessageBubble({
   readUpTo,
   onDelete,
   onResend,
+  onUnlock,
   deleting,
 }: {
   msg: LocalMessage;
@@ -275,17 +345,144 @@ function MessageBubble({
   readUpTo: string | undefined;
   onDelete: () => void;
   onResend: () => void;
+  onUnlock: () => void;
   deleting: boolean;
 }) {
   const isMine = msg.fromUserId === meId;
   const deleted = !!msg.deletedAt;
   const failed = msg.status === "failed";
+  const attachments = msg.attachments ?? [];
+  const hasAttachments = attachments.length > 0;
+  const hasBody = !!(msg.body && msg.body.trim().length > 0);
+  const renderTextBubble = hasBody || deleted || !hasAttachments;
+  const priceKobo = msg.priceKobo ?? null;
+  const locked = !!msg.locked && !isMine && !deleted;
+  const paidBySender = isMine && !!priceKobo && !deleted;
 
   // Compute status for own messages if not already set.
   let status = msg.status;
   if (isMine && !status) {
     if (readUpTo && msg.id <= readUpTo) status = "read";
     else status = "sent";
+  }
+
+  const timeLabel = timeAgo(msg.createdAt);
+  const showMeta = !deleted;
+  const showTicks = isMine && !deleted;
+
+  // Meta rendered inside the text bubble (bottom-right).
+  const inlineMeta = showMeta ? (
+    <span
+      className={cn(
+        "float-right ml-2 mt-1 inline-flex items-center gap-1 text-[10px] shrink-0",
+        isMine ? "text-white/80" : "text-white/50"
+      )}
+    >
+      <span className="tabular-nums">{timeLabel}</span>
+      {showTicks ? <StatusTicks status={status} /> : null}
+    </span>
+  ) : null;
+
+  // Meta overlaid on the last attachment when there's no text bubble.
+  const overlayMeta =
+    showMeta && hasAttachments && !renderTextBubble ? (
+      <span className="on-media absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-white text-[10px]">
+        <span className="tabular-nums">{timeLabel}</span>
+        {showTicks ? <StatusTicks status={status} /> : null}
+      </span>
+    ) : null;
+
+  if (locked) {
+    const priceNaira = priceKobo
+      ? (priceKobo / 100).toLocaleString("en-NG")
+      : "0";
+    const priceLabel = `₦${priceNaira}`;
+    // Backend redacts attachments to null when locked; if it ever exposes
+    // per-kind counts (e.g. attachmentCounts), plug them in here.
+    const imageCount = attachments.filter((a) => a.kind === "image").length;
+    const videoCount = attachments.filter((a) => a.kind === "video").length;
+    const hasCounts = imageCount + videoCount > 0;
+    return (
+      <div className="flex flex-col max-w-[75%] gap-1 items-start self-start">
+        <div className="w-[300px] rounded-[16px] rounded-bl-sm hairline bg-white/[0.04] overflow-hidden">
+          {/* Hero: centered price-in-lock over a soft petal backdrop */}
+          <div className="relative aspect-[4/3] w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
+            <svg
+              aria-hidden
+              viewBox="0 0 200 150"
+              className="absolute inset-0 w-full h-full opacity-[0.12]"
+              fill="none"
+            >
+              <ellipse cx="60" cy="120" rx="90" ry="60" fill="currentColor" />
+              <ellipse cx="150" cy="130" rx="80" ry="50" fill="currentColor" />
+              <ellipse cx="110" cy="150" rx="70" ry="40" fill="currentColor" />
+            </svg>
+            <div className="relative flex items-center justify-center">
+              <Lock
+                className="size-16 text-white/50"
+                strokeWidth={1.25}
+                aria-hidden
+              />
+              <span className="absolute mt-2 text-[11px] font-bold text-white/80 tabular-nums">
+                {priceLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Info row */}
+          <div className="flex items-center justify-between px-3.5 py-2 border-t border-white/[0.06] text-[11px]">
+            <div className="flex items-center gap-2 text-white/60">
+              {imageCount > 0 ? (
+                <span className="inline-flex items-center gap-1">
+                  <ImageIcon className="size-3.5" aria-hidden />
+                  <span className="tabular-nums">{imageCount}</span>
+                </span>
+              ) : null}
+              {imageCount > 0 && videoCount > 0 ? (
+                <span aria-hidden>·</span>
+              ) : null}
+              {videoCount > 0 ? (
+                <span className="inline-flex items-center gap-1">
+                  <Video className="size-3.5" aria-hidden />
+                  <span className="tabular-nums">{videoCount}</span>
+                </span>
+              ) : null}
+              {!hasCounts ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Lock className="size-3" aria-hidden />
+                  <span>Locked</span>
+                </span>
+              ) : null}
+            </div>
+            <span className="inline-flex items-center gap-1 text-white/80 font-semibold tabular-nums">
+              {priceLabel}
+              <Lock className="size-3" aria-hidden />
+            </span>
+          </div>
+
+          {/* Preview text (if any) */}
+          {msg.previewBody ? (
+            <p className="px-3.5 pb-2 -mt-0.5 text-[12px] text-white/70 leading-relaxed line-clamp-2">
+              {msg.previewBody}
+            </p>
+          ) : null}
+
+          {/* Unlock button */}
+          <div className="px-3 pb-3">
+            <button
+              type="button"
+              onClick={onUnlock}
+              className="w-full inline-flex items-center justify-center rounded-full py-2.5 bg-gradient-brand text-white on-media text-[13px] font-bold tracking-wide uppercase hover:opacity-95 transition-opacity"
+            >
+              Unlock for {priceLabel}
+            </button>
+          </div>
+        </div>
+        <span className="text-[10px] text-white/45 tabular-nums">
+          {timeLabel}
+        </span>
+      </div>
+    );
   }
 
   return (
@@ -295,32 +492,66 @@ function MessageBubble({
         isMine ? "items-end self-end" : "items-start self-start"
       )}
     >
-      <div
-        className={cn(
-          "px-3.5 py-2 rounded-[16px] text-[14px] leading-relaxed break-words whitespace-pre-wrap",
-          isMine
-            ? "bg-gradient-brand text-white on-media rounded-br-sm"
-            : "bg-white/[0.06] hairline text-white rounded-bl-sm",
-          deleted && "italic opacity-60"
-        )}
-      >
-        {deleted ? "Message deleted" : msg.body || " "}
-      </div>
-      <div className="flex items-center gap-1.5 text-[10px] text-white/40">
-        <span>{timeAgo(msg.createdAt)}</span>
-        {isMine && !deleted ? (
-          <StatusTicks status={status} />
-        ) : null}
-        {isMine && failed ? (
-          <button
-            type="button"
-            onClick={onResend}
-            className="text-[#FD5CC9] font-semibold hover:text-white"
-          >
-            Resend
-          </button>
-        ) : null}
-        {isMine && !deleted ? (
+      {hasAttachments && !deleted ? (
+        <div
+          className={cn(
+            "flex flex-col gap-1.5",
+            isMine ? "items-end" : "items-start"
+          )}
+        >
+          {attachments.map((att, i) => {
+            const isLast = i === attachments.length - 1;
+            const attachOverlay = isLast ? overlayMeta : null;
+            return (
+              <div
+                key={att.mediaId || att.url}
+                className={attachOverlay ? "relative" : undefined}
+              >
+                <AttachmentRenderer attachment={att} mine={isMine} />
+                {attachOverlay}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+      {renderTextBubble ? (
+        <div
+          className={cn(
+            "px-3.5 py-2 rounded-[16px] text-[14px] leading-relaxed break-words whitespace-pre-wrap",
+            isMine
+              ? "bg-gradient-brand text-white on-media rounded-br-sm"
+              : "bg-white/[0.06] hairline text-white rounded-bl-sm",
+            deleted && "italic opacity-60"
+          )}
+        >
+          <span>{deleted ? "Message deleted" : msg.body || " "}</span>
+          {inlineMeta}
+        </div>
+      ) : null}
+      {paidBySender ? (
+        <span className="inline-flex items-center gap-1 text-[10px] text-white/55">
+          <Lock className="size-3" />
+          <span className="font-semibold text-white/75">
+            ₦{(priceKobo! / 100).toLocaleString("en-NG")}
+          </span>
+          <span>·</span>
+          <span>
+            {msg.unlockCount ?? 0} unlock
+            {(msg.unlockCount ?? 0) === 1 ? "" : "s"}
+          </span>
+        </span>
+      ) : null}
+      {isMine && !deleted && (failed || hasBody || hasAttachments) ? (
+        <div className="flex items-center gap-2 text-[10px] text-white/40">
+          {failed ? (
+            <button
+              type="button"
+              onClick={onResend}
+              className="text-[#FD5CC9] font-semibold hover:text-white"
+            >
+              Resend
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onDelete}
@@ -334,8 +565,8 @@ function MessageBubble({
           >
             {deleting ? "Deleting…" : failed ? "Discard" : "Delete"}
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

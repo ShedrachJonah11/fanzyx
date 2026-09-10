@@ -3,6 +3,7 @@ import type {
   ChangePasswordDto,
   MeOut,
   ReportIn,
+  TopSupportersOut,
   UpdateMeIn,
   UserPublic,
 } from "../dtos";
@@ -20,6 +21,13 @@ export const users = {
   /* ── public profile ──────────────────────────────── */
   byUsername: (username: string) =>
     apiClient.get<UserPublic>(`/v1/users/${username}`),
+
+  /** Public — top supporters strip on the creator profile. */
+  topSupporters: (username: string, limit = 7) =>
+    apiClient.get<TopSupportersOut>(
+      `/v1/users/${username}/top-supporters`,
+      { query: { limit } }
+    ),
 
   /* ── relationships ───────────────────────────────── */
   follow: (username: string) =>

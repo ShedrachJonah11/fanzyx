@@ -28,12 +28,22 @@ import { TipModal } from "@/components/tip/TipModal";
 import { ImageCropper } from "@/components/media/ImageCropper";
 import { uploadImage } from "@/services/modules/uploads";
 import Link from "next/link";
-import { creators as allCreators, type Creator } from "@/lib/mock-data";
-import type { PostOut, UserSocials } from "@/services/dtos";
+import { type Creator } from "@/lib/mock-data";
+import type {
+  ExploreCreatorOut,
+  PostOut,
+  TopSupporterOut,
+  UserSocials,
+} from "@/services/dtos";
+import { discover } from "@/services/modules/discover";
+import { users as usersApi } from "@/services/modules/users";
 import { cn, formatCompact, formatNaira } from "@/lib/utils";
 import { useAuth } from "@/services/context";
 import { useFollow, useUserProfile } from "@/services/hooks/users";
 import { ApiError } from "@/services/apiClient";
+
+const BRAND_GRADIENT =
+  "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)";
 
 export function CreatorProfile({
   creator,
@@ -111,6 +121,44 @@ export function CreatorProfile({
       setCoverBusy(false);
     }
   };
+
+  // Similar creators — top explore results excluding this profile.
+  const [similar, setSimilar] = useState<ExploreCreatorOut[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await discover.explore({ sort: "subs", limit: 10 });
+        if (cancelled) return;
+        setSimilar(
+          res.items.filter((c) => c.username !== creator.username).slice(0, 3)
+        );
+      } catch {
+        // Silent — the section just stays empty.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [creator.username]);
+
+  // Recent supporters — public endpoint, same view for owner + visitors.
+  const [supporters, setSupporters] = useState<TopSupporterOut[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await usersApi.topSupporters(creator.username, 7);
+        if (cancelled) return;
+        setSupporters(res.items);
+      } catch {
+        // Silent — the strip just stays empty.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [creator.username]);
 
   const profile = useUserProfile(isSelf ? null : creator.username);
   const followState = useFollow(
@@ -399,11 +447,13 @@ export function CreatorProfile({
         {/* Body — main column content only */}
         <div className="px-4 sm:px-8 mt-8 flex flex-col gap-8">
           {/* Subscribe Now + Bundles */}
-          <SubscriptionPanel
-            creator={creator}
-            isSelf={isSelf}
-            onSubscribe={() => setSubOpen(true)}
-          />
+          <div id="plans" className="scroll-mt-24">
+            <SubscriptionPanel
+              creator={creator}
+              isSelf={isSelf}
+              onSubscribe={() => setSubOpen(true)}
+            />
+          </div>
 
           <FeedTabs items={tabs} value={tab} onValueChange={setTab} />
 
@@ -515,63 +565,85 @@ export function CreatorProfile({
                 See all
               </Link>
             </div>
-            <ul className="flex flex-col gap-2">
-              {allCreators
-                .filter((c) => c.username !== creator.username)
-                .sort((a, b) => b.subscribers - a.subscribers)
-                .slice(0, 3)
-                .map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/creator/${c.username}`}
-                      className="flex items-center gap-3 p-2 rounded-[12px] hover:bg-white/[0.04] transition-colors"
-                    >
-                      <Avatar
-                        name={c.name}
-                        gradient={c.avatarGradient}
-                        image={c.image}
-                        size={40}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-[13px] font-semibold text-white truncate">
-                            {c.name}
+            {similar.length === 0 ? (
+              <p className="text-[11px] text-white/45">
+                Nothing to show yet.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {similar.map((c) => {
+                  const displayName = c.displayName || c.username;
+                  return (
+                    <li key={c.id}>
+                      <Link
+                        href={`/creator/${c.username}`}
+                        className="flex items-center gap-3 p-2 rounded-[12px] hover:bg-white/[0.04] transition-colors"
+                      >
+                        <Avatar
+                          name={displayName}
+                          gradient={BRAND_GRADIENT}
+                          image={c.avatarUrl ?? undefined}
+                          size={40}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="text-[13px] font-semibold text-white truncate">
+                              {displayName}
+                            </span>
+                            {c.verified ? (
+                              <VerifiedBadge className="!size-3" />
+                            ) : null}
+                          </div>
+                          <div className="text-[11px] text-white/55 truncate">
+                            @{c.username} · {formatCompact(c.subscriberCount)} subs
+                          </div>
+                        </div>
+                        {c.monthlyPriceKobo ? (
+                          <span className="text-[10px] font-semibold text-[#FD23A7] uppercase tracking-wider shrink-0">
+                            {formatNaira(c.monthlyPriceKobo / 100, {
+                              compact: true,
+                            })}
+                            /mo
                           </span>
-                          {c.verified ? <VerifiedBadge className="!size-3" /> : null}
-                        </div>
-                        <div className="text-[11px] text-white/55 truncate">
-                          @{c.username} · {formatCompact(c.subscribers)} subs
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-semibold text-[#FD23A7] uppercase tracking-wider shrink-0">
-                        {formatNaira(c.monthlyPrice, { compact: true })}/mo
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-            </ul>
+                        ) : null}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
 
-          {/* Recent tips (top spenders) */}
+          {/* Recent supporters */}
           <section>
             <h3 className="text-[12px] uppercase tracking-[0.14em] font-bold text-white/60 mb-3">
               Recent supporters
             </h3>
-            <div className="flex items-center -space-x-2">
-              {allCreators.slice(0, 6).map((c) => (
-                <span
-                  key={c.id}
-                  className="size-8 rounded-full ring-2 ring-[#0E0E14] overflow-hidden"
-                  style={{ backgroundImage: c.avatarGradient }}
-                  title={c.name}
-                />
-              ))}
-            </div>
-            <p className="text-[11px] text-white/55 mt-2">
+            {supporters.length > 0 ? (
+              <div className="flex items-center -space-x-2 mb-2">
+                {supporters.map((s) => (
+                  <Link
+                    key={s.id}
+                    href={`/creator/${s.username}`}
+                    title={s.displayName || s.username}
+                    className="size-8 rounded-full ring-2 ring-[#0E0E14] overflow-hidden bg-white/[0.06]"
+                  >
+                    <Avatar
+                      name={s.displayName || s.username}
+                      gradient={BRAND_GRADIENT}
+                      image={s.avatarUrl ?? undefined}
+                      size={32}
+                    />
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+            <p className="text-[11px] text-white/55">
               <span className="font-semibold text-white">
                 {formatCompact(creator.subscribers)}
               </span>{" "}
-              people support {creator.name.split(" ")[0]}.
+              {creator.subscribers === 1 ? "person supports" : "people support"}{" "}
+              {creator.name.split(" ")[0]}.
             </p>
           </section>
         </aside>
@@ -618,6 +690,7 @@ export function CreatorProfile({
           file={coverPending}
           aspect={3}
           outputWidth={1200}
+          size="lg"
           title="Adjust your cover"
           onCropped={uploadCover}
           onClose={() => setCoverPending(null)}

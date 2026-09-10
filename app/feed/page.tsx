@@ -149,7 +149,7 @@ export default function FeedPage() {
 
   return (
     <DashboardShell variant="fan">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_500px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_450px]">
         <div className="flex flex-col min-w-0">
           {/* Mobile: stories tray if any, otherwise featured creators */}
           <div className="lg:hidden mb-5">

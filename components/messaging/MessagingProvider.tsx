@@ -19,6 +19,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
   const applyTyping = useMessagingStore((s) => s.applyTyping);
   const applyDelivered = useMessagingStore((s) => s.applyDelivered);
   const applyRead = useMessagingStore((s) => s.applyRead);
+  const applyUnlocked = useMessagingStore((s) => s.applyUnlocked);
 
   useEffect(() => {
     if (!user) {
@@ -50,6 +51,9 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       wsClient.subscribe("message:read", (e) => {
         applyRead(e.conversation_id, e.up_to_message_id);
       }),
+      wsClient.subscribe("message:unlocked", (e) => {
+        applyUnlocked(e.conversation_id, e.message_id, e.unlock_count);
+      }),
     ];
 
     wsClient.connect();
@@ -66,6 +70,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
     applyTyping,
     applyDelivered,
     applyRead,
+    applyUnlocked,
   ]);
 
   return <>{children}</>;

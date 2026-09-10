@@ -143,7 +143,7 @@ export default function DashboardHomePage() {
 
   return (
     <DashboardShell variant="creator">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_500px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_450px]">
         <div className="flex flex-col gap-4 min-w-0">
           {/* Stories tray — always show for creators (so they can post),
               otherwise render only when the viewer has stories to see. */}

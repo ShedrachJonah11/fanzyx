@@ -232,6 +232,8 @@ export function ConversationList({ basePath, activeConvId }: Props) {
               const name = conv.other.displayName || conv.other.username;
               const preview = conv.lastMessage?.deletedAt
                 ? "Message deleted"
+                : conv.lastMessage?.locked
+                ? conv.lastMessage.previewBody || "🔒 Paid message"
                 : conv.lastMessage?.body || "New attachment";
               return (
                 <li

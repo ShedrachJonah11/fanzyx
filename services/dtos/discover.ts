@@ -22,6 +22,24 @@ export interface TopSubscribersOut {
   items: TopSubscriberOut[];
 }
 
+/**
+ * Public "recent supporters" strip rendered on the creator profile page.
+ * Deliberately hides money — social proof only. Ranked by lifetime spend
+ * (subs + tips) on that specific creator.
+ */
+export interface TopSupporterOut {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  verified: boolean;
+  rank: number;
+}
+
+export interface TopSupportersOut {
+  items: TopSupporterOut[];
+}
+
 export interface FeaturedCreatorOut {
   id: string;
   username: string;

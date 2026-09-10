@@ -10,6 +10,7 @@ import type {
   MessageAttachment,
   MessageOut,
   PresenceEntry,
+  SendAttachmentIn,
   SendMessageIn,
 } from "../dtos";
 
@@ -66,7 +67,12 @@ type MessagingState = {
   sendMessage: (
     convId: string,
     body: string,
-    opts?: { attachments?: MessageAttachment[]; replyToId?: string }
+    opts?: {
+      attachments?: MessageAttachment[];
+      replyToId?: string;
+      priceKobo?: number;
+      previewBody?: string;
+    }
   ) => Promise<void>;
   resendMessage: (convId: string, tempId: string) => Promise<void>;
   removeLocalMessage: (convId: string, id: string) => void;
@@ -74,6 +80,7 @@ type MessagingState = {
   togglePin: (convId: string, next: boolean) => Promise<void>;
   toggleMute: (convId: string, next: boolean) => Promise<void>;
   deleteConversation: (convId: string) => Promise<void>;
+  unlockMessage: (convId: string, messageId: string) => Promise<void>;
 
   applyIncomingMessage: (convId: string, msg: MessageOut) => void;
   applyPresence: (userId: string, entry: PresenceEntry) => void;
@@ -81,6 +88,7 @@ type MessagingState = {
   applyTyping: (convId: string, userId: string) => void;
   applyDelivered: (msgId: string, at: string) => void;
   applyRead: (convId: string, upToId: string) => void;
+  applyUnlocked: (convId: string, messageId: string, unlockCount: number) => void;
 };
 
 function sortConvOrder(conversations: Record<string, ConversationOut>): string[] {
@@ -266,6 +274,9 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     const tempId = newIdempotencyKey();
     const now = new Date().toISOString();
 
+    const priceKobo = opts?.priceKobo && opts.priceKobo > 0 ? opts.priceKobo : null;
+    const previewBody =
+      priceKobo && opts?.previewBody ? opts.previewBody : null;
     const optimistic: LocalMessage = {
       id: tempId,
       tempId,
@@ -278,6 +289,12 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       editedAt: null,
       deletedAt: null,
       status: "sending",
+      priceKobo,
+      previewBody,
+      // Sender always sees their own message unlocked.
+      locked: false,
+      unlockedByMe: true,
+      unlockCount: 0,
     };
     const current = get().messagesByConv[convId] ?? [];
     set({
@@ -287,24 +304,59 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       },
     });
 
+    // Server only needs mediaId (+ waveform for audio). We keep the fuller
+    // MessageAttachment shape locally for the optimistic bubble render.
+    const apiAttachments: SendAttachmentIn[] | undefined = opts?.attachments
+      ?.filter((a) => !!a.mediaId)
+      .map((a) => ({
+        mediaId: a.mediaId,
+        ...(a.waveform ? { waveform: a.waveform } : {}),
+      }));
     const dto: SendMessageIn = {
       body: trimmed || undefined,
-      attachments: opts?.attachments,
+      attachments:
+        apiAttachments && apiAttachments.length > 0
+          ? apiAttachments
+          : undefined,
       replyToId: opts?.replyToId,
+      priceKobo: priceKobo ?? undefined,
+      previewBody: previewBody ?? undefined,
     };
 
     try {
       const saved = await messages.send(convId, dto);
+      // If the server response is missing/empty attachments but we sent some,
+      // preserve the local attachments so the sender's bubble still shows the
+      // media. The recipient will get the server-side attachments via WS.
+      const localAtts = optimistic.attachments;
+      const serverAtts = saved.attachments;
+      const mergedAtts =
+        serverAtts && serverAtts.length > 0
+          ? serverAtts
+          : localAtts && localAtts.length > 0
+          ? localAtts
+          : serverAtts ?? null;
+      if (
+        localAtts &&
+        localAtts.length > 0 &&
+        (!serverAtts || serverAtts.length === 0)
+      ) {
+        console.warn(
+          "[messaging] send response returned no attachments; " +
+            "preserving local previews. Check backend attachment plumbing."
+        );
+      }
+      const merged: LocalMessage = {
+        ...saved,
+        attachments: mergedAtts,
+        status: "sent" as MessageStatus,
+      };
       // Swap optimistic → server row.
       const list = get().messagesByConv[convId] ?? [];
       set({
         messagesByConv: {
           ...get().messagesByConv,
-          [convId]: list.map((m) =>
-            m.tempId === tempId
-              ? { ...saved, status: "sent" as MessageStatus }
-              : m
-          ),
+          [convId]: list.map((m) => (m.tempId === tempId ? merged : m)),
         },
       });
 
@@ -313,8 +365,8 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       if (conv) {
         const nextConv: ConversationOut = {
           ...conv,
-          lastMessage: saved,
-          lastMessageAt: saved.createdAt,
+          lastMessage: merged,
+          lastMessageAt: merged.createdAt,
         };
         const conversations = { ...get().conversations, [convId]: nextConv };
         set({
@@ -351,6 +403,8 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     await get().sendMessage(convId, failed.body ?? "", {
       attachments: failed.attachments ?? undefined,
       replyToId: failed.replyToId ?? undefined,
+      priceKobo: failed.priceKobo ?? undefined,
+      previewBody: failed.previewBody ?? undefined,
     });
   },
 
@@ -460,6 +514,22 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     }
   },
 
+  unlockMessage: async (convId, messageId) => {
+    const list = get().messagesByConv[convId] ?? [];
+    const target = list.find((m) => m.id === messageId);
+    if (!target || target.unlockedByMe) return;
+    const key = newIdempotencyKey();
+    const unlocked = await messages.unlock(messageId, key);
+    // Swap in the full unlocked message (body + attachments now populated).
+    const currentList = get().messagesByConv[convId] ?? [];
+    set({
+      messagesByConv: {
+        ...get().messagesByConv,
+        [convId]: currentList.map((m) => (m.id === messageId ? unlocked : m)),
+      },
+    });
+  },
+
   applyIncomingMessage: (convId, msg) => {
     const list = get().messagesByConv[convId] ?? [];
     // De-dupe (WS can race with the REST send response).
@@ -556,6 +626,17 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
     );
     set({
       messagesByConv: { ...state.messagesByConv, [convId]: updated },
+    });
+  },
+
+  applyUnlocked: (convId, messageId, unlockCount) => {
+    const list = get().messagesByConv[convId];
+    if (!list) return;
+    const updated = list.map((m) =>
+      m.id === messageId ? { ...m, unlockCount } : m
+    );
+    set({
+      messagesByConv: { ...get().messagesByConv, [convId]: updated },
     });
   },
 }));
