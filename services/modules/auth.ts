@@ -7,6 +7,8 @@ import type {
   GoogleAuthDto,
   GoogleCallbackDto,
   LoginDto,
+  LoginResponse,
+  LoginTotpDto,
   MeOut,
   ResendOtpDto,
   ResetPasswordDto,
@@ -17,6 +19,7 @@ import type {
   TokenPair,
   VerifyEmailDto,
 } from "../dtos";
+import { isLoginChallenge } from "../dtos";
 
 function saveAuthOut(res: AuthOut): AuthOut {
   tokenStore.set(res.tokens.accessToken, res.tokens.refreshToken);
@@ -59,8 +62,16 @@ export const auth = {
       isForm: true,
     }),
 
-  login: async (dto: LoginDto) => {
-    const res = await apiClient.post<AuthOut>("/v1/auth/login", dto, {
+  login: async (dto: LoginDto): Promise<LoginResponse> => {
+    const res = await apiClient.post<LoginResponse>("/v1/auth/login", dto, {
+      auth: false,
+    });
+    if (isLoginChallenge(res)) return res;
+    return saveAuthOut(res);
+  },
+
+  loginTotp: async (dto: LoginTotpDto) => {
+    const res = await apiClient.post<AuthOut>("/v1/auth/login/totp", dto, {
       auth: false,
     });
     return saveAuthOut(res);

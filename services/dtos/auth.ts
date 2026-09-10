@@ -1,3 +1,5 @@
+import type { UserSocials } from "./users";
+
 export type ULID = string;
 export type ISODate = string;
 
@@ -31,6 +33,8 @@ export interface MeOut {
   createdAt: ISODate;
   onboardingCompletedAt: ISODate | null;
   payoutAccount: PayoutAccountSummary | null;
+  twoFactorEnabled: boolean;
+  socials: UserSocials | null;
 }
 
 export interface PayoutAccountSummary {
@@ -80,6 +84,53 @@ export interface SignupCreatorPasswordDto {
 export interface LoginDto {
   emailOrUsername: string;
   password: string;
+}
+
+export interface LoginChallenge {
+  challengeId: string;
+  next: "totp";
+}
+
+export interface LoginTotpDto {
+  challengeId: string;
+  code: string;
+}
+
+export type LoginResponse = AuthOut | LoginChallenge;
+
+export function isLoginChallenge<T extends object>(
+  r: T | LoginChallenge
+): r is LoginChallenge {
+  return (
+    typeof r === "object" &&
+    r !== null &&
+    "next" in r &&
+    (r as { next?: unknown }).next === "totp" &&
+    "challengeId" in r
+  );
+}
+
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface TwoFactorSetupOut {
+  secret: string;
+  qrCodeUrl: string;
+}
+
+export interface TwoFactorEnableDto {
+  code: string;
+}
+
+export interface TwoFactorEnableOut {
+  ok: true;
+  backupCodes: string[];
+}
+
+export interface TwoFactorDisableDto {
+  code: string;
 }
 
 export interface GoogleAuthDto {

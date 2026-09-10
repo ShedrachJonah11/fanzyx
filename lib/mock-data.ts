@@ -6,8 +6,10 @@ export type Creator = {
   avatarGradient: string;
   coverGradient: string;
   image?: string;
+  coverImage?: string;
   verified: boolean;
   subscribers: number;
+  followers?: number;
   monthlyPrice: number;
   featured?: boolean;
   socials?: {

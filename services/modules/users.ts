@@ -1,5 +1,6 @@
 import { apiClient } from "../apiClient";
 import type {
+  ChangePasswordDto,
   MeOut,
   ReportIn,
   UpdateMeIn,
@@ -13,6 +14,8 @@ export const users = {
   updateMe: (patch: UpdateMeIn) => apiClient.patch<MeOut>("/v1/me", patch),
   confirmAge: () => apiClient.post<MeOut>("/v1/me/confirm-age"),
   deleteMe: () => apiClient.delete<void>("/v1/me"),
+  changePassword: (dto: ChangePasswordDto) =>
+    apiClient.post<{ ok: true }>("/v1/me/password", dto),
 
   /* ── public profile ──────────────────────────────── */
   byUsername: (username: string) =>

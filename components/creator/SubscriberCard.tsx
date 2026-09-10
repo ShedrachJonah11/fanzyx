@@ -1,9 +1,11 @@
+import Image from "next/image";
+import Link from "next/link";
 import { ChevronRight, Lock, Users } from "lucide-react";
-import type { Subscriber } from "@/lib/mock-data";
+import type { TopSubscriberOut } from "@/services/dtos";
 import { cn, formatNaira, initials } from "@/lib/utils";
 
 type Props = {
-  subscriber: Subscriber;
+  subscriber: TopSubscriberOut;
   variant?: "hero" | "grid";
   rank?: number;
 };
@@ -36,19 +38,20 @@ const HERO_GRADIENT = {
 
 export function SubscriberCard({ subscriber, variant = "grid", rank }: Props) {
   const isHero = variant === "hero";
-  const subsCount = Math.max(
-    1,
-    Math.round(subscriber.totalSpent / Math.max(1, subscriber.planPrice))
-  );
+  const name = subscriber.displayName || subscriber.username;
+  const monthsBadge = subscriber.activeSubMonths;
+  const totalSpentNaira = subscriber.totalSpentKobo / 100;
 
+  const paletteSeed = Number(subscriber.id.replace(/\D/g, "")) || 0;
   const palette = isHero
     ? HERO_GRADIENT
-    : GRADIENTS[(Number(subscriber.id.replace(/\D/g, "")) || 0) % GRADIENTS.length];
+    : GRADIENTS[paletteSeed % GRADIENTS.length];
 
   return (
-    <article
+    <Link
+      href={`/creator/${subscriber.username}`}
       className={cn(
-        "on-media relative overflow-hidden rounded-[20px] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.35)]",
+        "on-media relative overflow-hidden rounded-[20px] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.35)] block hover:scale-[1.01] transition-transform",
         isHero ? "p-5" : "p-4"
       )}
       style={{ backgroundImage: palette.bg }}
@@ -79,21 +82,41 @@ export function SubscriberCard({ subscriber, variant = "grid", rank }: Props) {
       <div className="relative z-10 flex flex-col gap-3">
         {/* Avatar + Top Spender pill */}
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center justify-center rounded-full bg-neutral-900/70 backdrop-blur text-white font-bold shrink-0 ring-2 ring-white/25",
-              isHero ? "text-[15px]" : "text-[13px]"
-            )}
-            style={{
-              width: isHero ? 48 : 40,
-              height: isHero ? 48 : 40,
-            }}
-          >
-            {initials(subscriber.name)}
-          </span>
+          {subscriber.avatarUrl ? (
+            <span
+              className={cn(
+                "relative overflow-hidden rounded-full shrink-0 ring-2 ring-white/25",
+              )}
+              style={{
+                width: isHero ? 48 : 40,
+                height: isHero ? 48 : 40,
+              }}
+            >
+              <Image
+                src={subscriber.avatarUrl}
+                alt=""
+                fill
+                sizes={isHero ? "48px" : "40px"}
+                className="object-cover"
+              />
+            </span>
+          ) : (
+            <span
+              className={cn(
+                "inline-flex items-center justify-center rounded-full bg-neutral-900/70 backdrop-blur text-white font-bold shrink-0 ring-2 ring-white/25",
+                isHero ? "text-[15px]" : "text-[13px]"
+              )}
+              style={{
+                width: isHero ? 48 : 40,
+                height: isHero ? 48 : 40,
+              }}
+            >
+              {initials(name)}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 rounded-full bg-black/35 backdrop-blur-md text-white text-[9px] font-bold uppercase tracking-[0.14em] px-2 py-1">
             <span className="size-1 rounded-full bg-white/80" />
-            Top Spender
+            {isHero ? "Top Spender" : "Subscriber"}
           </span>
         </div>
 
@@ -105,7 +128,7 @@ export function SubscriberCard({ subscriber, variant = "grid", rank }: Props) {
               isHero ? "text-[17px]" : "text-[14px]"
             )}
           >
-            {subscriber.name}
+            {name}
           </div>
           <div
             className={cn(
@@ -127,17 +150,17 @@ export function SubscriberCard({ subscriber, variant = "grid", rank }: Props) {
         >
           <StatBadge
             icon={<Lock className="size-3" fill="currentColor" strokeWidth={0} />}
-            label="Subs"
-            value={String(subsCount)}
+            label="Months"
+            value={monthsBadge > 0 ? String(monthsBadge) : "—"}
           />
           <StatBadge
             icon={<Users className="size-3" fill="currentColor" strokeWidth={0} />}
             label="Spent"
-            value={formatNaira(subscriber.totalSpent, { compact: true })}
+            value={formatNaira(totalSpentNaira, { compact: true })}
           />
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
 

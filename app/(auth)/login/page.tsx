@@ -4,30 +4,35 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useState } from "react";
 import { toast } from "sonner";
-import { AtSign, Lock } from "lucide-react";
+import { AtSign, Lock, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { useAuth } from "@/services/context";
 import { ApiError } from "@/services/apiClient";
 import { postAuthRoute } from "@/services/postAuthRoute";
+import { isLoginChallenge, type LoginChallenge } from "@/services/dtos";
 
 const AUTH_MESSAGES: Record<string, string> = {
   invalid_credentials: "Wrong email/username or password.",
   account_disabled: "This account has been disabled. Contact support.",
   rate_limited: "Too many attempts. Try again in a moment.",
+  invalid_totp: "That code didn't match. Try again.",
+  challenge_expired: "That code expired — log in again.",
 };
 
 function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const { login } = useAuth();
+  const { login, loginTotp } = useAuth();
   const nextPath = search.get("next");
 
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
+  const [totpCode, setTotpCode] = useState("");
 
   const showError = (err: unknown) => {
     const msg =
@@ -43,9 +48,14 @@ function LoginForm() {
       if (!emailOrUsername || !password) return;
       setSubmitting(true);
       try {
-        const user = await login({ emailOrUsername, password });
+        const res = await login({ emailOrUsername, password });
+        if (isLoginChallenge(res)) {
+          setChallenge(res);
+          toast.info("Enter your 6-digit code");
+          return;
+        }
         toast.success("Welcome back");
-        router.replace(postAuthRoute(user, nextPath));
+        router.replace(postAuthRoute(res, nextPath));
       } catch (err) {
         showError(err);
       } finally {
@@ -54,6 +64,74 @@ function LoginForm() {
     },
     [emailOrUsername, password, login, router, nextPath]
   );
+
+  const onSubmitTotp = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!challenge || totpCode.length < 6) return;
+      setSubmitting(true);
+      try {
+        const user = await loginTotp({
+          challengeId: challenge.challengeId,
+          code: totpCode,
+        });
+        toast.success("Welcome back");
+        router.replace(postAuthRoute(user, nextPath));
+      } catch (err) {
+        showError(err);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [challenge, totpCode, loginTotp, router, nextPath]
+  );
+
+  if (challenge) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[26px] font-semibold text-white tracking-tight">
+            Two-factor code
+          </h1>
+          <p className="text-sm text-white/55">
+            Enter the 6-digit code from your authenticator app, or a backup code.
+          </p>
+        </div>
+
+        <form className="flex flex-col gap-4" onSubmit={onSubmitTotp}>
+          <Input
+            label="Verification code"
+            placeholder="123456"
+            leftIcon={<ShieldCheck />}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            value={totpCode}
+            onChange={(e) =>
+              setTotpCode(e.target.value.replace(/\s/g, "").slice(0, 12))
+            }
+          />
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={submitting || totpCode.length < 6}
+          >
+            {submitting ? "Verifying…" : "Verify & continue"}
+          </Button>
+          <button
+            type="button"
+            className="text-xs text-white/55 hover:text-white/85 underline underline-offset-4"
+            onClick={() => {
+              setChallenge(null);
+              setTotpCode("");
+            }}
+          >
+            Use a different account
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

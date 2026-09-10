@@ -6,6 +6,46 @@ import { users as usersApi } from "../modules/users";
 import type { ReportIn, UserPublic } from "../dtos";
 import { useAction, useAsync } from "./utils";
 
+/**
+ * localStorage-backed record of who this device has followed. Acts as a
+ * source of truth when the backend's GET /v1/users/{username} response
+ * doesn't reflect the follow yet (eventual consistency / cache lag).
+ */
+const LOCAL_FOLLOWS_KEY = "fanzyx.follows";
+
+function loadLocalFollows(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(LOCAL_FOLLOWS_KEY);
+    return new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveLocalFollows(set: Set<string>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      LOCAL_FOLLOWS_KEY,
+      JSON.stringify([...set])
+    );
+  } catch {
+    /* quota / disabled — ignore */
+  }
+}
+
+function markLocalFollow(username: string, followed: boolean) {
+  const s = loadLocalFollows();
+  if (followed) s.add(username);
+  else s.delete(username);
+  saveLocalFollows(s);
+}
+
+function hasLocalFollow(username: string): boolean {
+  return loadLocalFollows().has(username);
+}
+
 /* ── profile fetch ─────────────────────────────────────── */
 
 export function useUserProfile(username: string | null | undefined) {
@@ -30,13 +70,23 @@ export function useFollow(
   username: string,
   initialFollowing?: boolean
 ): UseFollowResult {
-  const [following, setFollowing] = useState<boolean>(initialFollowing ?? false);
+  const [following, setFollowing] = useState<boolean>(() => {
+    // Prefer local record so the state survives refresh even when the
+    // backend momentarily returns isFollowing:false after a fresh follow.
+    if (username && hasLocalFollow(username)) return true;
+    return initialFollowing ?? false;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
   useEffect(() => {
+    if (!username) return;
+    if (hasLocalFollow(username)) {
+      setFollowing(true);
+      return;
+    }
     if (initialFollowing !== undefined) setFollowing(initialFollowing);
-  }, [initialFollowing]);
+  }, [initialFollowing, username]);
 
   const set = useCallback(
     async (target: boolean) => {
@@ -48,6 +98,7 @@ export function useFollow(
       try {
         if (target) await usersApi.follow(username);
         else await usersApi.unfollow(username);
+        markLocalFollow(username, target);
       } catch (e) {
         setFollowing(prev);
         const err =

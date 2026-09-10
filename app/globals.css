@@ -147,6 +147,67 @@ body {
     border-radius: 16px;
   }
 
+  /* Same surface as .surface-card but with an animated brand-gradient border.
+     Uses a rotating conic gradient in the border-box layer for a flowing
+     "flash" effect that sweeps around the ring. The dual-background trick
+     (padding-box fill + border-box gradient) keeps overflow-hidden working. */
+  .surface-card-brand {
+    background:
+      linear-gradient(180deg, rgba(var(--fg-rgb), 0.02) 0%, rgba(var(--fg-rgb), 0) 100%) padding-box,
+      linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+      conic-gradient(
+        from var(--brand-ring-rot, 0deg),
+        var(--brand-blue),
+        var(--brand-violet),
+        var(--brand-magenta),
+        rgba(255, 255, 255, 0.95),
+        var(--brand-magenta),
+        var(--brand-violet),
+        var(--brand-blue)
+      ) border-box;
+    border: 3.5px solid transparent;
+    border-radius: 16px;
+    animation: brand-ring-spin 10s linear infinite;
+  }
+
+  /* Border-only variant — for elements that already have their own background
+     (e.g. the branded promo strip inside the PostCard). Same rotating conic
+     ring, no inner fill so the caller's bg shows through. */
+  .brand-border-flash {
+    background:
+      conic-gradient(
+        from var(--brand-ring-rot, 90deg),
+        var(--brand-blue),
+        var(--brand-violet),
+        var(--brand-magenta),
+        rgba(255, 255, 255, 0.95),
+        var(--brand-magenta),
+        var(--brand-violet),
+        var(--brand-blue)
+      ) border-box;
+    border: 3px solid transparent;
+    animation: brand-ring-spin 10s linear infinite;
+  }
+
+  @keyframes brand-ring-spin {
+    to {
+      --brand-ring-rot: 360deg;
+    }
+  }
+}
+
+/* Register --brand-ring-rot as an animatable CSS property. Without @property,
+   custom-property values can't be interpolated and the animation snaps at
+   0%/100% instead of rotating smoothly. Falls back gracefully in browsers
+   that don't support @property — the ring just doesn't animate. */
+@property --brand-ring-rot {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@layer utilities {
+
   .surface-elev {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -207,11 +268,32 @@ html.light .only-light { display: initial; }
   animation: shine 2.8s ease-in-out infinite;
 }
 
+/* Skeleton loader — subtle shimmer across an rgba block. */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-block {
+  background-color: rgba(var(--fg-rgb), 0.06);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--fg-rgb), 0.08) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-transition,
   .animate-fade-in,
   .animate-scale-in,
-  .animate-shine {
+  .animate-shine,
+  .skeleton-block,
+  .surface-card-brand,
+  .brand-border-flash {
     animation: none !important;
   }
 }

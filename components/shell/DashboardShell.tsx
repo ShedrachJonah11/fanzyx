@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Avatar } from "@/components/ui/Avatar";
+import { Toggle } from "@/components/ui/Toggle";
 import { PageTransition } from "@/components/PageTransition";
 import { useEmailVerify } from "@/components/auth/EmailVerifyManager";
 import { useAuth } from "@/services/context";
@@ -448,8 +449,7 @@ function NightModeSwitch() {
     setMounted(true);
   }, []);
 
-  const toggle = () => {
-    const next: "light" | "dark" = theme === "dark" ? "light" : "dark";
+  const setThemeTo = (next: "light" | "dark") => {
     const el = document.documentElement;
     el.classList.remove("light", "dark");
     el.classList.add(next);
@@ -465,28 +465,14 @@ function NightModeSwitch() {
   const Icon = mounted ? (isDark ? Moon : Sun) : Moon;
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-pressed={isDark}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="group flex items-center gap-3 h-10 px-3 rounded-[10px] text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
-    >
-      <Icon className="size-[18px] shrink-0 text-white/55 group-hover:text-white/85" />
-      <span className="font-medium flex-1 text-left">Night mode</span>
-      <span
-        className={cn(
-          "relative inline-flex items-center h-[22px] w-10 rounded-full transition-colors shrink-0",
-          isDark ? "bg-gradient-brand" : "bg-white/[0.12]"
-        )}
-      >
-        <span
-          className={cn(
-            "absolute size-[18px] rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-out",
-            isDark ? "translate-x-[20px]" : "translate-x-0.5"
-          )}
-        />
-      </span>
-    </button>
+    <div className="flex items-center gap-3 h-10 px-3 rounded-[10px] text-sm text-white/70">
+      <Icon className="size-[18px] shrink-0 text-white/55" />
+      <span className="font-medium flex-1">Night mode</span>
+      <Toggle
+        size="sm"
+        on={isDark}
+        onChange={(next) => setThemeTo(next ? "dark" : "light")}
+      />
+    </div>
   );
 }

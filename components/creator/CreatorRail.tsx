@@ -1,39 +1,65 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ChevronDown, Search } from "lucide-react";
 import { SubscriberCard } from "./SubscriberCard";
-import { subscribers as allSubscribers, type Subscriber } from "@/lib/mock-data";
+import { Skeleton } from "@/components/ui/Skeleton";
+import {
+  dashboard,
+  type TopSubscribersSort,
+} from "@/services/modules/dashboard";
+import { ApiError } from "@/services/apiClient";
+import type { TopSubscriberOut } from "@/services/dtos";
 import { cn } from "@/lib/utils";
 
-type SortMode = "spend" | "subs" | "newest";
-
-const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+const SORT_OPTIONS: { value: TopSubscribersSort; label: string }[] = [
   { value: "spend", label: "Top Spender" },
   { value: "subs", label: "Most Subs" },
   { value: "newest", label: "Newest" },
 ];
 
-export function CreatorRail() {
-  const [sort, setSort] = useState<SortMode>("spend");
+const LIMIT = 7; // 1 hero + 6 grid
 
-  const sorted = useMemo(() => {
-    const arr = [...allSubscribers];
-    if (sort === "spend") arr.sort((a, b) => b.totalSpent - a.totalSpent);
-    else if (sort === "subs")
-      arr.sort(
-        (a, b) =>
-          b.totalSpent / Math.max(1, b.planPrice) -
-          a.totalSpent / Math.max(1, a.planPrice)
-      );
-    else
-      arr.sort(
-        (a, b) => new Date(b.joined).getTime() - new Date(a.joined).getTime()
-      );
-    return arr;
+export function CreatorRail() {
+  const [sort, setSort] = useState<TopSubscribersSort>("spend");
+  const [items, setItems] = useState<TopSubscriberOut[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ApiError | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await dashboard.topSubscribers({ sort, limit: LIMIT });
+        if (cancelled) return;
+        setItems(res.items);
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof ApiError) {
+          setError(e);
+          // creator_required means we're on the dashboard as a non-creator —
+          // no toast, just render nothing.
+          if (e.code !== "creator_required") {
+            toast.error(e.detail ?? "Couldn't load subscribers");
+          }
+        }
+        setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [sort]);
 
-  const [top, ...rest] = sorted;
+  if (error?.code === "creator_required") return null;
+
+  const [top, ...rest] = items ?? [];
 
   return (
     <aside className="hidden lg:flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 [scrollbar-width:thin]">
@@ -50,7 +76,15 @@ export function CreatorRail() {
         <h2 className="text-[15px] font-semibold text-white mb-3">
           Most Engaged Subscribers
         </h2>
-        {top ? <SubscriberCard subscriber={top} variant="hero" rank={1} /> : null}
+        {loading ? (
+          <Skeleton className="h-40 w-full rounded-[20px]" />
+        ) : top ? (
+          <SubscriberCard subscriber={top} variant="hero" rank={1} />
+        ) : (
+          <div className="surface-card p-5 text-sm text-white/55">
+            No subscribers yet — your top fan will show up here.
+          </div>
+        )}
       </section>
 
       {/* Top Users */}
@@ -63,11 +97,21 @@ export function CreatorRail() {
           Discover and connect with the top users who are most engaged with your content,
           and see who&apos;s supporting you the most.
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          {rest.slice(0, 6).map((s) => (
-            <SubscriberCard key={s.id} subscriber={s} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-[20px]" />
+            ))}
+          </div>
+        ) : rest.length === 0 ? (
+          <p className="text-xs text-white/40">Nothing to show yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {rest.map((s) => (
+              <SubscriberCard key={s.id} subscriber={s} />
+            ))}
+          </div>
+        )}
       </section>
     </aside>
   );
@@ -77,26 +121,28 @@ function SortDropdown({
   value,
   onChange,
 }: {
-  value: SortMode;
-  onChange: (v: SortMode) => void;
+  value: TopSubscribersSort;
+  onChange: (v: TopSubscribersSort) => void;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const current = SORT_OPTIONS.find((o) => o.value === value) ?? SORT_OPTIONS[0];
 
+  const close = useCallback(() => setOpen(false), []);
+
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrapRef.current?.contains(e.target as Node)) close();
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, close]);
 
   return (
     <div ref={wrapRef} className="relative shrink-0">
@@ -130,7 +176,7 @@ function SortDropdown({
                 aria-checked={active}
                 onClick={() => {
                   onChange(o.value);
-                  setOpen(false);
+                  close();
                 }}
                 className={cn(
                   "w-full text-left px-3 py-2 rounded-[8px] text-[13px] flex items-center gap-2 transition-colors",

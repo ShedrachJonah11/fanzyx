@@ -13,12 +13,10 @@ type Props = {
 
 export function FeedTabs({ items, value, onValueChange, className }: Props) {
   return (
+    <div className={cn("pb-3", className)}>
     <div
       role="tablist"
-      className={cn(
-        "feed-tabs relative flex items-stretch border-b border-white/[0.06]",
-        className
-      )}
+      className="feed-tabs relative flex items-stretch border-b border-white/[0.06]"
     >
       {items.map((item) => {
         const active = item.value === value;
@@ -37,12 +35,13 @@ export function FeedTabs({ items, value, onValueChange, className }: Props) {
             {active ? (
               <span
                 aria-hidden
-                className="absolute inset-x-4 sm:inset-x-6 bottom-[-1px] h-[2px] rounded-full bg-gradient-brand"
+                className="absolute inset-x-0 -bottom-[2px] h-[2px] bg-gradient-brand"
               />
             ) : null}
           </button>
         );
       })}
+    </div>
     </div>
   );
 }

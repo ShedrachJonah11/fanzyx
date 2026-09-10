@@ -1,39 +1,31 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, Heart, Users } from "lucide-react";
+import type { FeaturedCreatorOut } from "@/services/dtos";
+import { formatCompact } from "@/lib/utils";
 
-export type FeaturedCreator = {
-  name: string;
-  username: string; // includes leading "@"
-  image?: string;
-  avatar?: string;
-  likes: string;
-  followers: string;
-  videos?: string;
-  photos?: string;
-  verified?: boolean;
-  href?: string;
-  /* Fallback backgrounds when image/avatar URLs are not provided */
-  coverGradient?: string;
-  avatarGradient?: string;
-};
+const BRAND_GRADIENT =
+  "linear-gradient(135deg, #4340FA 0%, #6929FC 45%, #FD23A7 100%)";
 
-export function CreatorCard({ creator }: { creator: FeaturedCreator }) {
-  const handle = creator.username.replace(/^@/, "");
-  const href = creator.href ?? `/creator/${handle}`;
-  const avatarSrc = creator.avatar ?? creator.image;
+export function CreatorCard({ creator }: { creator: FeaturedCreatorOut }) {
+  const name = creator.displayName || creator.username;
+  const cover = creator.coverUrl;
+  const avatar = creator.avatarUrl;
+  const href = `/creator/${creator.username}`;
 
   return (
     <Link
       href={href}
-      aria-label={`View ${creator.name}'s profile`}
+      aria-label={`View ${name}'s profile`}
       className="on-media group relative aspect-[2/3] rounded-[14px] overflow-hidden block bg-neutral-900 transition-transform duration-200 hover:scale-[1.01]"
     >
-      {/* Main image */}
-      {creator.image ? (
+      {/* Background — real cover if set, otherwise the brand gradient. The
+          avatar is NEVER used as the background (it would just be a blown-up
+          face behind the same face at the bottom). */}
+      {cover ? (
         <Image
-          src={creator.image}
-          alt={creator.name}
+          src={cover}
+          alt=""
           fill
           sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 33vw"
           className="object-cover"
@@ -41,7 +33,7 @@ export function CreatorCard({ creator }: { creator: FeaturedCreator }) {
       ) : (
         <div
           className="absolute inset-0"
-          style={{ backgroundImage: creator.coverGradient }}
+          style={{ backgroundImage: BRAND_GRADIENT }}
           aria-hidden
         />
       )}
@@ -58,11 +50,10 @@ export function CreatorCard({ creator }: { creator: FeaturedCreator }) {
 
       {/* Bottom content — avatar → name → username → stats, stacked */}
       <div className="absolute inset-x-0 bottom-0 p-3 flex flex-col items-center gap-2">
-        {/* Circular avatar with brand pink ring — sits directly above the name */}
         <div className="relative size-16 rounded-full overflow-hidden ring-[3px] ring-[#FD23A7]">
-          {avatarSrc ? (
+          {avatar ? (
             <Image
-              src={avatarSrc}
+              src={avatar}
               alt=""
               fill
               sizes="64px"
@@ -71,10 +62,7 @@ export function CreatorCard({ creator }: { creator: FeaturedCreator }) {
           ) : (
             <div
               className="absolute inset-0"
-              style={{
-                backgroundImage:
-                  creator.avatarGradient ?? creator.coverGradient,
-              }}
+              style={{ backgroundImage: BRAND_GRADIENT }}
               aria-hidden
             />
           )}
@@ -83,7 +71,7 @@ export function CreatorCard({ creator }: { creator: FeaturedCreator }) {
         <div className="min-w-0 flex flex-col items-center w-full">
           <div className="flex items-center justify-center gap-1 min-w-0 max-w-full">
             <h3 className="text-white font-bold text-[14px] truncate leading-tight">
-              {creator.name}
+              {name}
             </h3>
             {creator.verified ? (
               <BadgeCheck
@@ -96,7 +84,7 @@ export function CreatorCard({ creator }: { creator: FeaturedCreator }) {
             ) : null}
           </div>
           <p className="text-white text-[11px] font-medium truncate mt-0.5 text-center max-w-full">
-            {creator.username.startsWith("@") ? creator.username : `@${creator.username}`}
+            @{creator.username}
           </p>
         </div>
 
@@ -105,13 +93,13 @@ export function CreatorCard({ creator }: { creator: FeaturedCreator }) {
           <span className="inline-flex items-center gap-1.5">
             <Heart className="size-4" fill="currentColor" strokeWidth={0} />
             <span className="text-[13px] font-semibold leading-none">
-              {creator.likes}
+              {formatCompact(creator.totalLikes)}
             </span>
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Users className="size-4" fill="currentColor" strokeWidth={0} />
             <span className="text-[13px] font-semibold leading-none">
-              {creator.followers}
+              {formatCompact(creator.followerCount)}
             </span>
           </span>
         </div>

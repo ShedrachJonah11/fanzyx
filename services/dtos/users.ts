@@ -12,6 +12,7 @@ export interface UserPublic {
   role: Role;
   createdAt: string;
   /* creator extras, present when role === "creator" */
+  followerCount?: number;
   subscriberCount?: number;
   postCount?: number;
   socials?: UserSocials;

@@ -4,13 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  AtSign,
   Bell,
   CreditCard,
-  ExternalLink,
-  Globe,
   Lock,
-  LogOut,
   Shield,
   TriangleAlert,
   User as UserIcon,
@@ -20,6 +16,7 @@ import { DashboardShell } from "@/components/shell/DashboardShell";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
+import { Skeleton, SkeletonCircle } from "@/components/ui/Skeleton";
 import { useAuth } from "@/services/context";
 import { ApiError } from "@/services/apiClient";
 import type { UpdateMeIn } from "@/services/dtos";
@@ -114,7 +111,6 @@ function ProfileSection() {
       bio: user.bio ?? "",
       avatarUrl: user.avatarUrl ?? "",
       coverUrl: user.coverUrl ?? "",
-      socials: {},
     });
   }, [user]);
 
@@ -124,19 +120,12 @@ function ProfileSection() {
       (form.displayName ?? "") !== (user.displayName ?? "") ||
       (form.bio ?? "") !== (user.bio ?? "") ||
       (form.avatarUrl ?? "") !== (user.avatarUrl ?? "") ||
-      (form.coverUrl ?? "") !== (user.coverUrl ?? "") ||
-      !!(form.socials?.instagram ||
-        form.socials?.x ||
-        form.socials?.tiktok ||
-        form.socials?.website)
+      (form.coverUrl ?? "") !== (user.coverUrl ?? "")
     );
   }, [form, user]);
 
   const set = <K extends keyof UpdateMeIn>(key: K, value: UpdateMeIn[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
-
-  const setSocial = (key: "instagram" | "x" | "tiktok" | "website", value: string) =>
-    setForm((f) => ({ ...f, socials: { ...(f.socials ?? {}), [key]: value } }));
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,10 +141,6 @@ function ProfileSection() {
         patch.avatarUrl = form.avatarUrl?.trim() || undefined;
       if ((form.coverUrl ?? "") !== (user?.coverUrl ?? ""))
         patch.coverUrl = form.coverUrl?.trim() || undefined;
-      const socials = Object.fromEntries(
-        Object.entries(form.socials ?? {}).filter(([, v]) => (v ?? "").trim().length > 0)
-      );
-      if (Object.keys(socials).length > 0) patch.socials = socials;
       await updateMe(patch);
       toast.success("Profile saved");
     } catch (e) {
@@ -169,8 +154,17 @@ function ProfileSection() {
 
   if (authLoading || !user) {
     return (
-      <div className="py-16 flex items-center justify-center">
-        <span className="size-6 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
+      <div className="flex flex-col gap-6" aria-busy>
+        <div className="flex items-center gap-4">
+          <SkeletonCircle size={72} />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-32 rounded-full" />
+            <Skeleton className="h-3 w-24 rounded-full" />
+          </div>
+        </div>
+        <Skeleton className="h-11 w-full rounded-[12px]" />
+        <Skeleton className="h-28 w-full rounded-[12px]" />
+        <Skeleton className="h-10 w-32 rounded-full self-end" />
       </div>
     );
   }
@@ -205,44 +199,10 @@ function ProfileSection() {
 
       <Textarea
         label={`Bio (${(form.bio ?? "").length}/500)`}
-        placeholder="Tell fans a little about you…"
+        placeholder="Tell creators a little about you…"
         value={form.bio ?? ""}
         onChange={(e) => set("bio", e.target.value.slice(0, 500))}
       />
-
-      <div className="flex flex-col gap-3">
-        <SectionHead title="Socials" body="Links displayed on your profile." />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            label="Instagram"
-            placeholder="username"
-            leftIcon={<AtSign />}
-            value={form.socials?.instagram ?? ""}
-            onChange={(e) => setSocial("instagram", e.target.value)}
-          />
-          <Input
-            label="X"
-            placeholder="handle"
-            leftIcon={<AtSign />}
-            value={form.socials?.x ?? ""}
-            onChange={(e) => setSocial("x", e.target.value)}
-          />
-          <Input
-            label="TikTok"
-            placeholder="handle"
-            leftIcon={<AtSign />}
-            value={form.socials?.tiktok ?? ""}
-            onChange={(e) => setSocial("tiktok", e.target.value)}
-          />
-          <Input
-            label="Website"
-            placeholder="https://…"
-            leftIcon={<Globe />}
-            value={form.socials?.website ?? ""}
-            onChange={(e) => setSocial("website", e.target.value)}
-          />
-        </div>
-      </div>
 
       <div className="flex justify-end pt-2 border-t border-white/[0.05]">
         <Button type="submit" disabled={!dirty || saving}>
@@ -256,47 +216,12 @@ function ProfileSection() {
 /* ── Account (delete) ────────────────────────────────── */
 
 function AccountSection() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  const handleLogout = async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      await logout();
-      toast.success("Signed out");
-    } catch {
-      toast.error("Couldn't sign out");
-      setLoggingOut(false);
-      return;
-    }
-    // Hard nav — avoids the AuthGate race that would otherwise append ?next=…
-    window.location.href = "/login";
-  };
 
   return (
     <div className="flex flex-col gap-6">
       <SectionHead title="Account" body="Manage your account." />
-
-      <div className="rounded-[14px] hairline bg-white/[0.02] p-5 flex flex-col gap-3">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex items-center justify-center size-9 rounded-full bg-white/[0.06] text-white/70 shrink-0">
-            <LogOut className="size-4" />
-          </span>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-[15px] font-semibold text-white">Log out</h3>
-            <p className="text-sm text-white/60 mt-1 max-w-md">
-              Sign out of FanzyX on this device. You can log back in anytime.
-            </p>
-          </div>
-        </div>
-        <div>
-          <Button variant="secondary" onClick={handleLogout} disabled={loggingOut}>
-            {loggingOut ? "Signing out…" : "Log out"}
-          </Button>
-        </div>
-      </div>
 
       <div className="rounded-[14px] border border-red-500/20 bg-red-500/[0.05] p-5 flex flex-col gap-3">
         <div className="flex items-start gap-3">

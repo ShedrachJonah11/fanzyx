@@ -31,23 +31,33 @@ export interface OnboardingCompleteOut {
 
 /* ── Subscription pricing ───────────────────────────── */
 
+export type SubscriptionMonths = 1 | 2 | 3;
+
 export interface SubscriptionPricingOut {
   monthlyPriceKobo: number;
   discountPct: number;
   discountExpiresAt: string | null;
   discountActive: boolean;
+  /** Subset of [1, 2, 3] — durations the creator has chosen to offer.
+   *  Never empty; server-side deduped and sorted. */
+  availableMonths: SubscriptionMonths[];
 }
 
 export interface UpdateSubscriptionIn {
   monthlyPriceKobo: number;
   discountPct?: number;
   discountExpiresAt?: string | null;
+  /** Non-empty subset of [1, 2, 3]. Omit to keep the current selection. */
+  availableMonths?: SubscriptionMonths[];
 }
 
 /* Public plan list for the fan-side subscribe modal.
- * Always 3 entries — one per {1, 2, 3} months. */
+ * Length varies with the creator's `availableMonths` — 1..3 entries. */
 export interface CreatorPlan {
-  months: 1 | 2 | 3;
-  priceKobo: number;      // what the fan pays
+  months: SubscriptionMonths;
+  priceKobo: number;      // what the fan pays (already discounted)
   discountKobo: number;   // savings vs pre-discount price
+  /** ISO timestamp when the discount expires — optional. Backend can add
+   *  this at any time and the UI will start rendering "for N days". */
+  discountExpiresAt?: string | null;
 }

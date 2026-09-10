@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Avatar } from "@/components/ui/Avatar";
+import { ImageCropper } from "@/components/media/ImageCropper";
 import { useAuth } from "@/services/context";
 import { ApiError } from "@/services/apiClient";
 import { uploadImage } from "@/services/modules/uploads";
@@ -55,33 +56,49 @@ export default function CreatorOnboardingPage() {
     else if (user.onboardingCompletedAt) router.replace("/dashboard");
   }, [loading, user, router]);
 
-  const needsAgeGate = user?.is18 === false;
   const hasPayout = !!user?.payoutAccount;
 
-  const steps = useMemo(
+  // Freeze the "needs age gate?" decision at the moment the user first loads
+  // so confirming age mid-flow doesn't reshuffle step indices under us.
+  const [needsAgeGate, setNeedsAgeGate] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (needsAgeGate !== null) return;
+    if (!user) return;
+    setNeedsAgeGate(user.is18 === false);
+  }, [needsAgeGate, user]);
+
+  type StepName = "profile" | "payouts" | "age" | "finish";
+  const steps = useMemo<
+    { name: StepName; title: string; icon: typeof UserRound }[]
+  >(
     () =>
       needsAgeGate
         ? [
-            { id: 1, title: "Profile", icon: UserRound },
-            { id: 2, title: "Payouts", icon: Building2 },
-            { id: 3, title: "Verify age", icon: ShieldCheck },
-            { id: 4, title: "Finish", icon: Check },
+            { name: "profile", title: "Profile", icon: UserRound },
+            { name: "payouts", title: "Payouts", icon: Building2 },
+            { name: "age", title: "Verify age", icon: ShieldCheck },
+            { name: "finish", title: "Finish", icon: Check },
           ]
         : [
-            { id: 1, title: "Profile", icon: UserRound },
-            { id: 2, title: "Payouts", icon: Building2 },
-            { id: 3, title: "Finish", icon: Check },
+            { name: "profile", title: "Profile", icon: UserRound },
+            { name: "payouts", title: "Payouts", icon: Building2 },
+            { name: "finish", title: "Finish", icon: Check },
           ],
     [needsAgeGate]
   );
 
-  const totalSteps = steps.length;
-  const ageStep = needsAgeGate ? totalSteps - 1 : null;
-  const finishStep = totalSteps;
-
-  const [step, setStep] = useState(1);
-  const next = () => setStep((s) => Math.min(totalSteps, s + 1));
-  const prev = () => setStep((s) => Math.max(1, s - 1));
+  const [step, setStep] = useState<StepName>("profile");
+  const stepIndex = steps.findIndex((s) => s.name === step);
+  const next = () => {
+    const idx = steps.findIndex((s) => s.name === step);
+    const nextStep = steps[Math.min(steps.length - 1, idx + 1)];
+    if (nextStep) setStep(nextStep.name);
+  };
+  const prev = () => {
+    const idx = steps.findIndex((s) => s.name === step);
+    const prevStep = steps[Math.max(0, idx - 1)];
+    if (prevStep) setStep(prevStep.name);
+  };
 
   const declineAge = async () => {
     try {
@@ -115,10 +132,10 @@ export default function CreatorOnboardingPage() {
         {/* Stepper */}
         <ol className="flex items-center gap-2 sm:gap-4 mb-8 overflow-x-auto">
           {steps.map((s, i) => {
-            const active = s.id === step;
-            const done = s.id < step;
+            const active = s.name === step;
+            const done = i < stepIndex;
             return (
-              <li key={s.id} className="flex items-center gap-2 sm:gap-4 shrink-0">
+              <li key={s.name} className="flex items-center gap-2 sm:gap-4 shrink-0">
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
@@ -128,7 +145,7 @@ export default function CreatorOnboardingPage() {
                       !active && !done && "bg-white/[0.04] text-white/50 hairline"
                     )}
                   >
-                    {done ? <Check className="size-4" /> : s.id}
+                    {done ? <Check className="size-4" /> : i + 1}
                   </span>
                   <span
                     className={cn(
@@ -148,21 +165,17 @@ export default function CreatorOnboardingPage() {
         </ol>
 
         <div className="surface-card p-6 sm:p-8">
-          {step === 1 ? (
-            <ProfileStep onDone={next} />
-          ) : null}
+          {step === "profile" ? <ProfileStep onDone={next} /> : null}
 
-          {step === 2 ? (
-            <PayoutStep onDone={next} />
-          ) : null}
+          {step === "payouts" ? <PayoutStep onDone={next} /> : null}
 
-          {ageStep !== null && step === ageStep ? (
+          {step === "age" ? (
             <AgeStep
               onConfirm={async () => {
                 try {
                   await updateMe({ is18: true });
                   toast.success("Age confirmed");
-                  next();
+                  setStep("finish");
                 } catch (e) {
                   toast.error(errorMessage(e, "Couldn't confirm age"));
                 }
@@ -171,10 +184,10 @@ export default function CreatorOnboardingPage() {
             />
           ) : null}
 
-          {step === finishStep ? (
+          {step === "finish" ? (
             <FinishStep
               hasPayout={hasPayout}
-              ageOk={!needsAgeGate}
+              ageOk={user?.is18 === true}
               onComplete={async () => {
                 try {
                   await creatorOnboarding.complete();
@@ -194,19 +207,16 @@ export default function CreatorOnboardingPage() {
             />
           ) : null}
 
-          {step !== finishStep && step !== 1 && step !== 2 && step !== ageStep ? null : null}
-
-          {step !== finishStep ? (
+          {step !== "finish" ? (
             <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/[0.05]">
               <Button
                 variant="ghost"
                 onClick={prev}
-                disabled={step === 1}
+                disabled={step === "profile"}
                 leftIcon={<ArrowLeft />}
               >
                 Back
               </Button>
-              {/* The active step's own submit button lives inside each StepXxx */}
               <span />
             </div>
           ) : null}
@@ -227,6 +237,8 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
   const [coverUrl, setCoverUrl] = useState(user?.coverUrl ?? "");
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
+  const [avatarPending, setAvatarPending] = useState<File | null>(null);
+  const [coverPending, setCoverPending] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   const dirty =
@@ -239,13 +251,25 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
   const canContinue =
     username.trim().length >= 3 && displayName.trim().length > 0;
 
-  const handleAvatarPick = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarPick = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setAvatarPending(file);
+  };
+
+  const handleCoverPick = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setCoverPending(file);
+  };
+
+  const handleAvatarCropped = async (cropped: File) => {
+    setAvatarPending(null);
     setAvatarBusy(true);
     try {
-      const url = await uploadImage(file, "avatar");
+      const url = await uploadImage(cropped, "avatar");
       setAvatarUrl(url);
       toast.success("Avatar uploaded");
     } catch (err) {
@@ -255,13 +279,11 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
     }
   };
 
-  const handleCoverPick = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  const handleCoverCropped = async (cropped: File) => {
+    setCoverPending(null);
     setCoverBusy(true);
     try {
-      const url = await uploadImage(file, "cover");
+      const url = await uploadImage(cropped, "cover");
       setCoverUrl(url);
       toast.success("Cover uploaded");
     } catch (err) {
@@ -399,6 +421,30 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
           {saving ? "Saving…" : "Continue"}
         </Button>
       </div>
+
+      {avatarPending ? (
+        <ImageCropper
+          open
+          file={avatarPending}
+          aspect={1}
+          outputWidth={512}
+          circle
+          title="Adjust your avatar"
+          onCropped={handleAvatarCropped}
+          onClose={() => setAvatarPending(null)}
+        />
+      ) : null}
+      {coverPending ? (
+        <ImageCropper
+          open
+          file={coverPending}
+          aspect={3}
+          outputWidth={1200}
+          title="Adjust your cover"
+          onCropped={handleCoverCropped}
+          onClose={() => setCoverPending(null)}
+        />
+      ) : null}
     </div>
   );
 }

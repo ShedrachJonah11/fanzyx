@@ -22,7 +22,9 @@ import type {
   CreatorFlowResponse,
   GoogleAuthDto,
   GoogleCallbackDto,
+  LoginChallenge,
   LoginDto,
+  LoginTotpDto,
   MeOut,
   SignupCreatorPasswordDto,
   SignupCreatorStartDto,
@@ -30,13 +32,15 @@ import type {
   SignupFanDto,
   UpdateMeIn,
 } from "../dtos";
+import { isLoginChallenge } from "../dtos";
 
 export interface AuthContextValue {
   user: MeOut | null;
   loading: boolean;
   error: ApiError | null;
   isAuthenticated: boolean;
-  login: (dto: LoginDto) => Promise<MeOut>;
+  login: (dto: LoginDto) => Promise<MeOut | LoginChallenge>;
+  loginTotp: (dto: LoginTotpDto) => Promise<MeOut>;
   loginWithGoogle: (dto: GoogleAuthDto) => Promise<MeOut>;
   loginWithGoogleCallback: (dto: GoogleCallbackDto) => Promise<MeOut>;
   signupFan: (dto: SignupFanDto) => Promise<MeOut>;
@@ -117,6 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (dto: LoginDto) => {
     const res = await authApi.login(dto);
+    if (isLoginChallenge(res)) return res;
+    setUser(res.user);
+    return res.user;
+  }, []);
+
+  const loginTotp = useCallback(async (dto: LoginTotpDto) => {
+    const res = await authApi.loginTotp(dto);
     setUser(res.user);
     return res.user;
   }, []);
@@ -186,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       isAuthenticated: user !== null,
       login,
+      loginTotp,
       loginWithGoogle,
       loginWithGoogleCallback,
       signupFan,
@@ -204,6 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       login,
+      loginTotp,
       loginWithGoogle,
       loginWithGoogleCallback,
       signupFan,
