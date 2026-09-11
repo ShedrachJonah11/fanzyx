@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Lock, Mail, ShieldCheck } from "lucide-react";
@@ -14,8 +14,19 @@ import { adminAuth } from "@/services/modules/admin";
  * Admin login page — same auth endpoints as the public login, but branded
  * for the admin console and gates on role after success. Rendered at
  * admin.localhost/login (rewritten by middleware to /admin/login).
+ *
+ * useSearchParams() must sit inside a Suspense boundary so the shell can
+ * render statically while the params resolve on the client.
  */
 export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={<LoginShell />}>
+      <AdminLoginInner />
+    </Suspense>
+  );
+}
+
+function AdminLoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams?.get("next") || "/";
@@ -61,6 +72,38 @@ export default function AdminLoginPage() {
   );
 
   return (
+    <LoginShell>
+      <form className="flex flex-col gap-3" onSubmit={onSubmit}>
+        <Input
+          type="email"
+          label="Email"
+          placeholder="you@fanzyx.app"
+          leftIcon={<Mail />}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+        />
+        <Input
+          type="password"
+          label="Password"
+          placeholder="••••••••"
+          leftIcon={<Lock />}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+        />
+        <Button size="lg" className="w-full mt-2" disabled={submitting}>
+          {submitting ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+    </LoginShell>
+  );
+}
+
+function LoginShell({ children }: { children?: React.ReactNode }) {
+  return (
     <div className="min-h-dvh flex items-center justify-center bg-[#07070A] text-white p-6">
       <div className="w-full max-w-sm flex flex-col gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -74,32 +117,7 @@ export default function AdminLoginPage() {
             </p>
           </div>
         </div>
-
-        <form className="flex flex-col gap-3" onSubmit={onSubmit}>
-          <Input
-            type="email"
-            label="Email"
-            placeholder="you@fanzyx.app"
-            leftIcon={<Mail />}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-          <Input
-            type="password"
-            label="Password"
-            placeholder="••••••••"
-            leftIcon={<Lock />}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-          <Button size="lg" className="w-full mt-2" disabled={submitting}>
-            {submitting ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
+        {children}
       </div>
     </div>
   );
