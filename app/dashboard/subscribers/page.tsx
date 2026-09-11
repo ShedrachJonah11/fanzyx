@@ -182,7 +182,7 @@ function SubscriberRow({ sub }: { sub: SubscriptionOut }) {
         <div className="min-w-0">
           <div className="text-sm text-white font-medium truncate flex items-center gap-1">
             {name}
-            {sub.creator.verified ? <VerifiedBadge /> : null}
+            <VerifiedBadge active={sub.creator.verified} />
           </div>
           <div className="text-[11px] text-white/45 truncate">
             @{sub.creator.username}

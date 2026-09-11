@@ -221,7 +221,7 @@ function SubCard({
           >
             {name}
           </Link>
-          {sub.creator.verified ? <VerifiedBadge /> : null}
+          <VerifiedBadge active={sub.creator.verified} />
           {isActive && !sub.autoRenew ? (
             <Badge>Cancelled</Badge>
           ) : isCancelled ? (

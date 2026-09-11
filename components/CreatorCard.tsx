@@ -62,7 +62,7 @@ export function CreatorCard({ creator }: { creator: Creator }) {
             >
               {creator.name}
             </Link>
-            {creator.verified ? <VerifiedBadge /> : null}
+            <VerifiedBadge active={creator.verified} />
           </div>
           <span className="text-xs text-white/50 truncate">@{creator.username}</span>
         </div>

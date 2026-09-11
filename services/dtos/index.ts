@@ -14,3 +14,5 @@ export * from "./payouts";
 export * from "./messages";
 export * from "./notifications";
 export * from "./referrals";
+export * from "./identity";
+export * from "./admin";

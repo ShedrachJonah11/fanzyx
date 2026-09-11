@@ -1,3 +1,4 @@
+import { BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Variant = "default" | "brand" | "success" | "warning" | "danger" | "muted";
@@ -33,20 +34,32 @@ export function Badge({
   );
 }
 
-export function VerifiedBadge({ className }: { className?: string }) {
+/**
+ * Scallop-shape verified checkmark (lucide `BadgeCheck`) — matches the
+ * verified marks used on explore tiles and the admin users list, so the
+ * badge visual is consistent everywhere.
+ *
+ * `active=false` renders the same shape in a muted grey — a "reserved slot"
+ * that signals "verification available but not earned yet".
+ */
+export function VerifiedBadge({
+  className,
+  active = true,
+}: {
+  className?: string;
+  active?: boolean;
+}) {
   return (
-    <span
+    <BadgeCheck
+      aria-label={active ? "Verified" : "Not verified"}
       className={cn(
-        "inline-flex items-center justify-center rounded-full bg-gradient-brand text-white shrink-0",
+        "size-3.5 shrink-0",
+        active ? "text-[#FD23A7]" : "text-white/30",
         className
       )}
-      style={{ width: 16, height: 16 }}
-      aria-label="Verified"
-      title="Verified"
-    >
-      <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="20 6 9 17 4 12" />
-      </svg>
-    </span>
+      fill="currentColor"
+      stroke={active ? "#0B0B12" : "#0B0B12"}
+      strokeWidth={2}
+    />
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppToaster } from "@/components/AppToaster";
 import { EmailVerifyManager } from "@/components/auth/EmailVerifyManager";
+import { IdentityVerifyManager } from "@/components/auth/IdentityVerifyManager";
 import { AuthProvider } from "@/services/context";
 import { MessagingProvider } from "@/components/messaging/MessagingProvider";
 import "./globals.css";
@@ -60,7 +61,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-app text-app flex flex-col" suppressHydrationWarning>
         <AuthProvider>
           <MessagingProvider>
-            <EmailVerifyManager>{children}</EmailVerifyManager>
+            <EmailVerifyManager>
+              <IdentityVerifyManager>{children}</IdentityVerifyManager>
+            </EmailVerifyManager>
           </MessagingProvider>
         </AuthProvider>
         <AppToaster />

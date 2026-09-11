@@ -289,7 +289,7 @@ export function StoryPlayer({
               <span className="text-[14px] font-semibold text-white truncate drop-shadow">
                 {name}
               </span>
-              {creator.verified ? <VerifiedBadge /> : null}
+              <VerifiedBadge active={creator.verified} />
               <span className="text-[11px] text-white/70 shrink-0 drop-shadow">
                 · {timeAgo(story.createdAt)}
               </span>

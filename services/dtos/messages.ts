@@ -128,4 +128,10 @@ export type WsServerEvent =
       user_id: string;
       unlock_count: number;
       at: string;
+    }
+  | {
+      type: "identity:updated";
+      status: "verified" | "rejected";
+      rejection_code: string | null;
+      at: string;
     };

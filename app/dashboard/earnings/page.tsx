@@ -278,6 +278,8 @@ function WithdrawModal({
             ? "Amount too small after fees. Try a larger withdrawal."
             : e.code === "creator_required"
             ? "Creator accounts only."
+            : e.code === "identity_required"
+            ? "Get identity-verified to request a payout."
             : e.detail ?? e.message
           : "Couldn't request payout";
       toast.error(msg);

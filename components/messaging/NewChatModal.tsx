@@ -213,7 +213,7 @@ export function NewChatModal({ basePath, onClose }: Props) {
                           <span className="text-[14px] font-semibold text-white truncate">
                             {name}
                           </span>
-                          {c.verified ? <VerifiedBadge /> : null}
+                          <VerifiedBadge active={c.verified} />
                         </div>
                         <div className="text-[11px] text-white/55 truncate">
                           @{c.username}

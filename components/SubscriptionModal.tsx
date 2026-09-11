@@ -245,7 +245,7 @@ export function SubscriptionModal({ open, onClose, target, onSuccess }: Props) {
                 <span className="text-[17px] font-semibold text-white truncate">
                   {displayName}
                 </span>
-                {target.verified ? <VerifiedBadge /> : null}
+                <VerifiedBadge active={target.verified} />
               </div>
               <span className="text-[13px] text-white/55 truncate block">
                 @{target.username}

@@ -10,6 +10,9 @@ export type NotificationKind =
   | "live_start"
   | "payout_paid"
   | "referral_converted"
+  | "identity_verified"
+  | "identity_rejected"
+  | "posts_published"
   | "moderation"
   | "system";
 

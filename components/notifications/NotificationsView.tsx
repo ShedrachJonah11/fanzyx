@@ -14,6 +14,8 @@ import {
   Heart,
   MessageSquare,
   Radio,
+  ShieldCheck,
+  ShieldX,
   Sparkles,
   UserPlus,
   Users,
@@ -60,6 +62,21 @@ const kindMeta: Record<
     icon: Gift,
     tint: "text-[#FD5CC9]",
     ring: "bg-[#FD5CC9]/15",
+  },
+  identity_verified: {
+    icon: ShieldCheck,
+    tint: "text-green-300",
+    ring: "bg-green-500/15",
+  },
+  identity_rejected: {
+    icon: ShieldX,
+    tint: "text-red-300",
+    ring: "bg-red-500/15",
+  },
+  posts_published: {
+    icon: Sparkles,
+    tint: "text-[#FD23A7]",
+    ring: "bg-[#FD23A7]/15",
   },
   moderation: {
     icon: AlertTriangle,
@@ -148,6 +165,13 @@ export function NotificationsView({ variant }: { variant: Variant }) {
           return { href: isFan ? "/transactions" : "/dashboard/transactions" };
         case "referral_converted":
           return { href: isFan ? "/feed" : "/dashboard/referrals" };
+        case "identity_verified":
+        case "identity_rejected":
+          return { href: "/dashboard/settings/identity" };
+        case "posts_published":
+          // Auto-publish celebration — send them to their own profile so
+          // they can see the posts that just went public.
+          return { href: isFan ? "/feed" : "/dashboard/posts" };
         case "comment":
         case "reply":
         case "mention":

@@ -3,31 +3,94 @@ import { NextResponse, type NextRequest } from "next/server";
 const AUTH_COOKIE = "fanzyx.at";
 
 /**
- * Edge gate for protected routes. Presence of the fanzyx.at cookie means "we
- * think we have a session"; if it's actually expired or invalid, the app's
- * 401-refresh interceptor + AuthGate handle it after render.
+ * Paths on the main domain that require an authenticated session. The full
+ * app/admin tree is gated separately via the admin subdomain rewrite below.
  */
-export function middleware(req: NextRequest) {
-  const token = req.cookies.get(AUTH_COOKIE)?.value;
-  if (token) return NextResponse.next();
+const AUTHED_PATH_PREFIXES = [
+  "/dashboard",
+  "/feed",
+  "/wallet",
+  "/subscriptions",
+  "/messages",
+  "/notifications",
+  "/settings",
+  "/saved",
+  "/transactions",
+  "/onboarding",
+];
 
-  const { pathname, search } = req.nextUrl;
-  const loginUrl = req.nextUrl.clone();
-  loginUrl.pathname = "/login";
-  loginUrl.search = `?next=${encodeURIComponent(pathname + search)}`;
-  return NextResponse.redirect(loginUrl);
+function needsAuth(pathname: string) {
+  return AUTHED_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+}
+
+/**
+ * `admin.localhost` (dev) and `admin.fanzyx.com` (prod). Strips any port and
+ * lower-cases before checking. Modern browsers resolve `*.localhost` → 127.0.0.1
+ * without needing /etc/hosts changes.
+ */
+function isAdminHost(host: string | null): boolean {
+  if (!host) return false;
+  const h = host.split(":")[0].toLowerCase();
+  return h === "admin.localhost" || h.startsWith("admin.");
+}
+
+export function middleware(req: NextRequest) {
+  const url = req.nextUrl;
+  const host = req.headers.get("host");
+  const pathname = url.pathname;
+
+  /* ── Admin subdomain ────────────────────────────────
+     Everything on `admin.*` is served from the app/admin route tree.
+     Rewrite so that visiting admin.localhost/foo internally maps to
+     /admin/foo — clean URL bar, single Next.js app. */
+  if (isAdminHost(host)) {
+    if (pathname.startsWith("/admin")) return NextResponse.next();
+
+    const token = req.cookies.get(AUTH_COOKIE)?.value;
+    const isPublicAdminPath =
+      pathname === "/login" || pathname.startsWith("/login/");
+    if (!token && !isPublicAdminPath) {
+      const loginUrl = url.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = `?next=${encodeURIComponent(pathname + url.search)}`;
+      // Login lives inside the admin tree too — rewrite so we don't jump host.
+      return NextResponse.rewrite(
+        Object.assign(loginUrl.clone(), {
+          pathname: `/admin${loginUrl.pathname}`,
+        })
+      );
+    }
+
+    const rewritten = url.clone();
+    rewritten.pathname = `/admin${pathname === "/" ? "" : pathname}`;
+    return NextResponse.rewrite(rewritten);
+  }
+
+  /* ── Main domain ────────────────────────────────────
+     /admin/* is admin-subdomain-only — hide it from the public site. */
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  if (needsAuth(pathname)) {
+    const token = req.cookies.get(AUTH_COOKIE)?.value;
+    if (!token) {
+      const loginUrl = url.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = `?next=${encodeURIComponent(pathname + url.search)}`;
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
+  /* Run on every path except static assets + Next internals. Hostname isn't
+     matchable here so we filter inside the middleware. */
   matcher: [
-    "/dashboard/:path*",
-    "/feed/:path*",
-    "/wallet/:path*",
-    "/subscriptions/:path*",
-    "/messages/:path*",
-    "/settings/:path*",
-    "/saved/:path*",
-    "/transactions/:path*",
-    "/onboarding/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|woff|woff2|ttf|eot|map)$).*)",
   ],
 };

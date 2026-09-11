@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/services/context";
 import { wsClient } from "@/services/ws/client";
 import { useMessagingStore } from "@/services/stores/messaging";
@@ -11,7 +12,7 @@ import { useMessagingStore } from "@/services/stores/messaging";
  * sign-out.
  */
 export function MessagingProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const setMeId = useMessagingStore((s) => s.setMeId);
   const reset = useMessagingStore((s) => s.reset);
   const applyIncomingMessage = useMessagingStore((s) => s.applyIncomingMessage);
@@ -54,6 +55,16 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
       wsClient.subscribe("message:unlocked", (e) => {
         applyUnlocked(e.conversation_id, e.message_id, e.unlock_count);
       }),
+      wsClient.subscribe("identity:updated", (e) => {
+        // Pull the fresh identityStatus + verified badge into MeOut so the
+        // sidebar CTA, profile button, and badge all flip immediately.
+        refresh?.();
+        if (e.status === "verified") {
+          toast.success("You're verified! Your hidden posts are now public.");
+        } else if (e.status === "rejected") {
+          toast.error("Verification needs another look — check your inbox.");
+        }
+      }),
     ];
 
     wsClient.connect();
@@ -63,6 +74,7 @@ export function MessagingProvider({ children }: { children: React.ReactNode }) {
     };
   }, [
     user,
+    refresh,
     setMeId,
     reset,
     applyIncomingMessage,

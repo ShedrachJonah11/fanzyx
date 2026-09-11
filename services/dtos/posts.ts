@@ -1,6 +1,14 @@
 
 export type PostVisibility = "free" | "subscribers" | "ppv";
-export type PostStatus = "draft" | "scheduled" | "published" | "archived" | "removed";
+export type PostStatus =
+  | "draft"
+  | "scheduled"
+  | "published"
+  | "archived"
+  | "removed"
+  /** Author isn't identity-verified yet — post is stored but hidden from
+   *  public feeds. Flips to "published" once the creator gets verified. */
+  | "pending_verification";
 export type PostMediaKind = "image" | "video" | "audio";
 export type PostMediaStatus = "uploading" | "processing" | "ready" | "failed";
 
@@ -60,6 +68,13 @@ export interface PostOut {
   tags: string[];
   poll: PollOut | null;
   createdAt: string;
+  /**
+   * Post is stored but hidden from the public feed because the author
+   * hasn't been identity-verified yet. Backend flips this to false + moves
+   * the post into the public feed once the creator's identityStatus
+   * becomes "verified". Only present on the author's own view.
+   */
+  hiddenPendingVerification?: boolean;
 }
 
 export interface PostPollIn {

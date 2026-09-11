@@ -266,7 +266,7 @@ export function ConversationList({ basePath, activeConvId }: Props) {
                         <span className="text-[14px] font-semibold text-white truncate">
                           {name}
                         </span>
-                        {conv.other.verified ? <VerifiedBadge /> : null}
+                        <VerifiedBadge active={conv.other.verified} />
                         {conv.pinned ? (
                           <Pin className="size-3 text-white/60" />
                         ) : null}

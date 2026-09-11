@@ -240,6 +240,8 @@ export function Composer({ convId }: { convId: string }) {
             toast.error("You can't message yourself.");
           else if (e.code === "creator_required")
             toast.error("Only creators can charge for messages.");
+          else if (e.code === "identity_required")
+            toast.error("Get identity-verified to charge for messages.");
           else if (e.code === "attachment_not_ready")
             toast.error("Attachment isn't ready yet — try again.");
           else if (e.code === "attachment_not_owned")

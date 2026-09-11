@@ -1042,6 +1042,8 @@ function SubscriptionSection() {
           e instanceof ApiError
             ? e.code === "validation_error"
               ? "Check the values and try again."
+              : e.code === "identity_required"
+              ? "Get identity-verified to charge for subscriptions."
               : e.detail ?? e.message
             : "Couldn't save subscription";
         toast.error(msg);

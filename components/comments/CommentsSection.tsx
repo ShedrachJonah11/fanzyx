@@ -321,7 +321,7 @@ function CommentRow({
               {name}
             </span>
           )}
-          {author?.verified ? <VerifiedBadge /> : null}
+          {author ? <VerifiedBadge active={author.verified} /> : null}
           <span className="text-white/40 text-xs">·</span>
           <span className="text-[11px] text-white/45 shrink-0">
             {timeAgo(comment.createdAt)}

@@ -1,4 +1,10 @@
-export type UploadKind = "avatar" | "cover" | "image" | "video" | "audio";
+export type UploadKind =
+  | "avatar"
+  | "cover"
+  | "image"
+  | "video"
+  | "audio"
+  | "identity";
 
 export interface UploadInitIn {
   filename: string;

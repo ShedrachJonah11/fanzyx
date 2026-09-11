@@ -197,7 +197,7 @@ export function PostCard({ post: initial, showHeader = true, onChange, onRemove 
                   <span className="text-[16px] font-bold text-white truncate drop-shadow">
                     {displayName}
                   </span>
-                  {post.creator.verified ? <VerifiedBadge /> : null}
+                  <VerifiedBadge active={post.creator.verified} />
                 </div>
                 <div className="text-[12px] text-white/85 truncate drop-shadow">
                   @{post.creator.username}
@@ -214,6 +214,23 @@ export function PostCard({ post: initial, showHeader = true, onChange, onRemove 
               </button>
             ) : null}
           </div>
+        </div>
+      ) : null}
+
+      {isSelf && post.hiddenPendingVerification ? (
+        <div className="px-4 pt-3">
+          <Link
+            href="/dashboard/settings/identity"
+            className="flex items-center gap-2 rounded-[12px] hairline bg-yellow-500/10 text-yellow-100 px-3 py-2 text-[12px] hover:bg-yellow-500/15 transition-colors"
+          >
+            <Lock className="size-3.5 shrink-0" />
+            <span className="flex-1">
+              Hidden — publishes automatically when your identity is verified.
+            </span>
+            <span className="text-yellow-200 font-semibold whitespace-nowrap">
+              Verify now →
+            </span>
+          </Link>
         </div>
       ) : null}
 

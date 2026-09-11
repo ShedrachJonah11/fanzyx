@@ -13,6 +13,7 @@ import {
   Pencil,
   Search,
   Share2,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { InstagramIcon, TikTokIcon, WebsiteIcon, XIcon } from "@/components/icons";
@@ -370,6 +371,31 @@ export function CreatorProfile({
                   Edit profile
                 </Link>
               ) : null}
+              {isSelf &&
+              user?.role === "creator" &&
+              user.identityStatus !== "verified" ? (
+                <Link
+                  href="/dashboard/settings/identity"
+                  aria-label={
+                    user.identityStatus === "pending"
+                      ? "Verification in progress"
+                      : "Get verified"
+                  }
+                  className={cn(
+                    "inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-semibold transition-opacity shrink-0",
+                    user.identityStatus === "pending"
+                      ? "bg-yellow-500/15 text-yellow-200 hover:opacity-90"
+                      : "bg-gradient-brand text-white on-media shadow-[0_10px_30px_-12px_rgba(253,35,167,0.55)] hover:opacity-95"
+                  )}
+                >
+                  <ShieldCheck className="size-4" />
+                  {user.identityStatus === "pending"
+                    ? "Verification pending"
+                    : user.identityStatus === "rejected"
+                    ? "Resubmit verification"
+                    : "Get verified"}
+                </Link>
+              ) : null}
               {!isSelf ? (
                 <button
                   onClick={handleFollowClick}
@@ -413,7 +439,7 @@ export function CreatorProfile({
               <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                 {creator.name}
               </h1>
-              {creator.verified ? <VerifiedBadge className="!size-5" /> : null}
+              <VerifiedBadge className="!size-5" active={creator.verified} />
             </div>
             <div className="flex items-center gap-1.5 text-sm text-white/55">
               <span className="text-white/70">@{creator.username}</span>
@@ -590,9 +616,7 @@ export function CreatorProfile({
                             <span className="text-[13px] font-semibold text-white truncate">
                               {displayName}
                             </span>
-                            {c.verified ? (
-                              <VerifiedBadge className="!size-3" />
-                            ) : null}
+                            <VerifiedBadge className="!size-3" active={c.verified} />
                           </div>
                           <div className="text-[11px] text-white/55 truncate">
                             @{c.username} · {formatCompact(c.subscriberCount)} subs

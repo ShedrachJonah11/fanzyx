@@ -225,7 +225,7 @@ export function ThreadView({ convId, backPath }: Props) {
                 >
                   {peerName}
                 </Link>
-                {conv.other.verified ? <VerifiedBadge /> : null}
+                <VerifiedBadge active={conv.other.verified} />
               </div>
               <div className="text-[11px] text-white/55">
                 {isTyping
