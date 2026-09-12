@@ -150,9 +150,10 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
       });
       const map: Record<string, ConversationOut> = {};
       for (const c of page.items) map[c.id] = c;
+      const ordered = sortConvOrder(map);
       set({
         conversations: map,
-        convOrder: sortConvOrder(map),
+        convOrder: ordered,
         convListLoading: false,
         convListLoaded: true,
       });
@@ -163,6 +164,19 @@ export const useMessagingStore = create<MessagingState>((set, get) => ({
         presence.get(otherIds).then((res) => {
           set({ presenceByUser: { ...get().presenceByUser, ...res } });
         }).catch(() => {});
+      }
+
+      // Background-preload messages for the top N conversations so opening
+      // a chat is instant (no skeleton flash). Skip any that are already
+      // loaded or currently loading. Errors are swallowed — the thread
+      // view will retry on open if needed.
+      const PRELOAD_TOP = 8;
+      const pagination = get().messagePagination;
+      const toPreload = ordered
+        .slice(0, PRELOAD_TOP)
+        .filter((id) => !pagination[id]?.loaded && !pagination[id]?.loading);
+      for (const id of toPreload) {
+        get().loadMessages(id).catch(() => {});
       }
     } catch {
       set({ convListLoading: false, convListLoaded: true });

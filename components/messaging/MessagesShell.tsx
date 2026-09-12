@@ -43,7 +43,11 @@ export function MessagesShell({ basePath, variant = "creator", children }: Props
           (which was there to cancel the bottom-nav gutter). */}
       <div
         className={cn(
-          "-mx-4 sm:-mx-6 lg:-mx-8 -my-6 lg:-my-8 lg:-mb-8 flex min-h-[520px]",
+          "-mx-4 sm:-mx-6 lg:-mx-8 -my-6 lg:-my-8 lg:-mb-8 flex",
+          // Only enforce a min-height on desktop — on mobile with the
+          // keyboard open the viewport can drop well below 520px and any
+          // min-height leaves the composer floating mid-screen.
+          "lg:min-h-[520px]",
           inThread
             ? "h-[100dvh] mb-0"
             : "h-[calc(100dvh-4rem)] -mb-24 lg:h-[100dvh]"

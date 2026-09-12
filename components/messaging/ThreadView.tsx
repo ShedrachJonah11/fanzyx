@@ -293,8 +293,14 @@ export function ThreadView({ convId, backPath }: Props) {
         <div ref={bottomRef} className="h-px w-full" />
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-white/[0.05] p-3 shrink-0">
+      {/* Composer — pinned at the bottom of the flex column. Safe-area
+          padding keeps the input clear of the iPhone home indicator. */}
+      <div
+        className="border-t border-white/[0.05] p-3 shrink-0"
+        style={{
+          paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+        }}
+      >
         <Composer convId={convId} />
       </div>
 

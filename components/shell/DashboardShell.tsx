@@ -392,7 +392,7 @@ export function DashboardShell({
               onClick={() => setMobileOpen(false)}
             />
             <div className="relative w-72 bg-[#0A0A0F] border-r border-white/[0.06] p-5 flex flex-col overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-6 shrink-0">
                 <Logo size="md" />
                 <button
                   onClick={() => setMobileOpen(false)}
@@ -402,7 +402,7 @@ export function DashboardShell({
                   <X className="size-5" />
                 </button>
               </div>
-              <nav className="flex flex-col gap-1">
+              <nav className="flex flex-col gap-1 flex-1">
                 {groups.map((group, gi) => (
                   <div key={gi} className={cn("flex flex-col gap-0.5", gi > 0 && "mt-5")}>
                     {group.title ? <GroupHeading>{group.title}</GroupHeading> : null}
@@ -430,6 +430,52 @@ export function DashboardShell({
                   <NightModeSwitch />
                 </div>
               </nav>
+
+              {/* Profile card — mirrors the desktop sidebar so the logout
+                  affordance is always reachable on mobile too. */}
+              <div className="mt-4 surface-card p-3 shrink-0">
+                <div className="flex items-center gap-3">
+                  <Avatar
+                    name={displayName}
+                    gradient={brandGradient}
+                    image={avatarUrl}
+                    size={36}
+                  />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium text-white truncate">
+                      {displayName}
+                    </span>
+                    <span className="text-xs text-white/50 truncate">
+                      @{usernameHandle}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex items-center gap-1">
+                    <Link
+                      href={
+                        variant === "creator" ? "/dashboard/settings" : "/settings"
+                      }
+                      onClick={() => setMobileOpen(false)}
+                      className="inline-flex items-center justify-center size-8 rounded-full text-white/60 hover:text-white hover:bg-white/[0.06]"
+                      aria-label="Settings"
+                    >
+                      <Settings className="size-4" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        handleLogout();
+                      }}
+                      disabled={loggingOut}
+                      aria-label="Log out"
+                      title="Log out"
+                      className="inline-flex items-center justify-center size-8 rounded-full text-white/60 hover:text-red-300 hover:bg-red-500/10 disabled:opacity-60"
+                    >
+                      <LogOut className="size-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         ) : null}

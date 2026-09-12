@@ -77,9 +77,17 @@ export default function SettingsPage() {
 
   return (
     <DashboardShell title="Settings" subtitle="Manage your account and preferences.">
-      <div className="grid gap-4 lg:gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="surface-card p-2 h-max lg:sticky lg:top-24">
-          <ul className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="grid gap-6 grid-cols-[minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside
+          className={cn(
+            // min-w-0 so the tab list's intrinsic width doesn't force the
+            // grid track (and every sibling below) wider than the viewport.
+            "h-max min-w-0 -mx-4 sm:-mx-6",
+            // Desktop: original sidebar card + sticky, unchanged.
+            "lg:mx-0 lg:surface-card lg:p-2 lg:sticky lg:top-24"
+          )}
+        >
+          <ul className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible px-4 sm:px-6 lg:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {sections.map((s) => {
               const active = tab === s.value;
               const Icon = s.icon;
@@ -103,7 +111,7 @@ export default function SettingsPage() {
           </ul>
         </aside>
 
-        <div className="flex flex-col gap-4 min-w-0">
+        <div className="flex flex-col gap-4">
           {tab === "profile" ? <ProfileSection /> : null}
           {tab === "security" ? <LoginSecuritySection /> : null}
           {tab === "notifications" ? (
@@ -321,23 +329,16 @@ function LoginSecuritySection() {
       <BasicCard title="Login & Security" body="Manage your credentials.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Email address" defaultValue={user?.email ?? ""} readOnly />
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 min-w-0">
             <label className="text-xs font-medium text-white/70">Password</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="password"
-                readOnly
-                value="•••••••••"
-                className="flex-1 h-11 rounded-[12px] bg-white/[0.04] hairline text-[14px] text-white px-4 outline-none"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setPasswordOpen(true)}
-              >
-                Change password →
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPasswordOpen(true)}
+              className="w-full sm:w-auto self-start"
+            >
+              Change password
+            </Button>
           </div>
         </div>
 
@@ -414,7 +415,7 @@ function LoginSecuritySection() {
       ) : null}
 
       {/* Danger Zone */}
-      <div className="surface-card p-4 sm:p-6 flex flex-col gap-4 border border-red-500/20 bg-red-500/[0.03]">
+      <div className="surface-card p-6 flex flex-col gap-4 border border-red-500/20 bg-red-500/[0.03]">
         <div>
           <h2 className="text-lg font-semibold text-white">Danger Zone</h2>
           <p className="text-sm text-white/55 mt-1">Irreversible account actions.</p>
@@ -635,7 +636,7 @@ function DeleteAccountModal({
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={busy ? undefined : onClose}
       />
-      <div className="relative w-full max-w-md surface-card p-4 sm:p-6 flex flex-col gap-4">
+      <div className="relative w-full max-w-md surface-card p-6 flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <span className="inline-flex items-center justify-center size-10 rounded-full bg-red-500/15 text-red-300 shrink-0">
             <TriangleAlert className="size-5" />
@@ -888,7 +889,7 @@ function BasicCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="surface-card p-4 sm:p-6 flex flex-col gap-5">
+    <div className="surface-card p-6 flex flex-col gap-5">
       <div>
         <h2 className="text-lg font-semibold text-white">{title}</h2>
         <p className="text-sm text-white/55 mt-1">{body}</p>
@@ -1057,7 +1058,7 @@ function SubscriptionSection() {
   const active = pricing?.discountActive ?? false;
 
   return (
-    <div className="surface-card p-4 sm:p-6 flex flex-col gap-5">
+    <div className="surface-card p-6 flex flex-col gap-5">
       <div>
         <h2 className="text-lg font-semibold text-white">Create subscription</h2>
         <p className="text-sm text-white/55 mt-1">
@@ -1635,7 +1636,7 @@ function ModalShell({
       />
       <div
         className={cn(
-          "relative w-full surface-card p-4 sm:p-6 flex flex-col gap-4",
+          "relative w-full surface-card p-6 flex flex-col gap-4",
           wide ? "max-w-lg" : "max-w-md"
         )}
       >
