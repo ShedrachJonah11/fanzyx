@@ -41,6 +41,10 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#0A0814" },
     { media: "(prefers-color-scheme: light)", color: "#FBFAFF" },
   ],
+  // Required for env(safe-area-inset-*) to return non-zero on iPhones
+  // with a notch / dynamic island. Without this the header would tuck
+  // under the island in message threads.
+  viewportFit: "cover",
 };
 
 const themeInit = `(function(){try{var s=localStorage.getItem('fanzyx-theme');var m=window.matchMedia('(prefers-color-scheme: light)');var t=s||(m.matches?'light':'dark');document.documentElement.classList.add(t);document.documentElement.setAttribute('data-theme',t);document.documentElement.style.colorScheme=t;}catch(e){}})();`;

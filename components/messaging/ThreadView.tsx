@@ -225,8 +225,12 @@ export function ThreadView({ convId, backPath }: Props) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-3 border-b border-white/[0.08] shrink-0">
+      {/* Header — pads for the iPhone dynamic island / notch via
+          env(safe-area-inset-top) so it never tucks under. */}
+      <div
+        className="flex items-center gap-3 px-3 pb-3 border-b border-white/[0.08] shrink-0"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+      >
         <Link
           href={backPath}
           className="lg:hidden inline-flex items-center justify-center size-9 rounded-full text-white/70 hover:text-white hover:bg-white/[0.06]"
