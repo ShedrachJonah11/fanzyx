@@ -92,10 +92,40 @@ export function ThreadView({ convId, backPath }: Props) {
     wasNearBottomRef.current = distanceFromBottom < 120;
   }, []);
 
+  // On new message land: scroll to bottom if we were near-bottom.
   useLayoutEffect(() => {
     if (!wasNearBottomRef.current) return;
     bottomRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
   }, [lastMessageId]);
+
+  // On thread entry (convId change): always land on the last message and
+  // reset the near-bottom flag. Uses rAF so the scroll fires after the
+  // messages have actually painted (fixes the "opens in the middle" bug
+  // when messages are preloaded synchronously on first render).
+  useLayoutEffect(() => {
+    wasNearBottomRef.current = true;
+    const raf = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({
+        behavior: "instant" as ScrollBehavior,
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [convId]);
+
+  // iOS Safari scrolls the whole document to bring a focused input into
+  // view when the keyboard opens — and doesn't scroll back when it closes,
+  // leaving the header tucked under the dynamic island. Lock body scroll
+  // while a thread is open so the browser can't push the page around.
+  useEffect(() => {
+    const prevHtml = document.documentElement.style.overflow;
+    const prevBody = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
+    };
+  }, []);
 
   // Mark-read when the last message is visible.
   useEffect(() => {
@@ -296,9 +326,9 @@ export function ThreadView({ convId, backPath }: Props) {
       {/* Composer — pinned at the bottom of the flex column. Safe-area
           padding keeps the input clear of the iPhone home indicator. */}
       <div
-        className="border-t border-white/[0.05] p-3 shrink-0"
+        className="border-t border-white/[0.05] px-2 py-1.5 shrink-0"
         style={{
-          paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+          paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))",
         }}
       >
         <Composer convId={convId} />

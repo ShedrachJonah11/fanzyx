@@ -715,7 +715,11 @@ export function Composer({ convId }: { convId: string }) {
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2">
+      {/* Mobile: textarea sits on its own row above the actions (WhatsApp/
+          OnlyFans layout). Desktop: single row with textarea in the middle.
+          `flex-wrap` + `basis-full` on the textarea achieves both without
+          duplicating DOM. */}
+      <div className="flex flex-wrap sm:flex-nowrap items-end gap-2">
         {/* Plus menu — upload / tip */}
         <div ref={plusWrapRef} className="relative shrink-0">
           <input
@@ -798,7 +802,9 @@ export function Composer({ convId }: { convId: string }) {
           </button>
         ) : null}
 
-        {/* Textarea */}
+        {/* Textarea — full-width first row on mobile, middle of the row
+            on desktop. `basis-full order-first` forces the textarea onto
+            its own line when the parent flex-wraps. */}
         <textarea
           ref={textareaRef}
           value={body}
@@ -810,7 +816,7 @@ export function Composer({ convId }: { convId: string }) {
           onKeyDown={onKeyDown}
           placeholder="Message…"
           rows={1}
-          className="flex-1 min-w-0 resize-none max-h-32 rounded-[16px] bg-white/[0.04] hairline text-[14px] text-white placeholder:text-white/40 px-4 py-2.5 outline-none focus:border-white/25 focus:bg-white/[0.06] transition-colors"
+          className="basis-full order-first sm:basis-0 sm:order-none flex-1 min-w-0 resize-none max-h-32 rounded-[16px] bg-white/[0.04] hairline text-[14px] text-white placeholder:text-white/40 px-4 py-2.5 outline-none focus:border-white/25 focus:bg-white/[0.06] transition-colors"
         />
 
         {/* Emoji */}
@@ -865,13 +871,13 @@ export function Composer({ convId }: { convId: string }) {
           <Mic className="size-4" />
         </button>
 
-        {/* Send */}
+        {/* Send — pushed to the right of the actions row on mobile. */}
         <button
           type="button"
           onClick={() => submit()}
           aria-label="Send message"
           disabled={!canSend}
-          className="inline-flex items-center justify-center size-10 rounded-full bg-gradient-brand text-white on-media shrink-0 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-95 transition-opacity"
+          className="ml-auto sm:ml-0 inline-flex items-center justify-center size-10 rounded-full bg-gradient-brand text-white on-media shrink-0 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-95 transition-opacity"
         >
           {sending ? (
             <span
