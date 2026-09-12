@@ -26,14 +26,27 @@ function needsAuth(pathname: string) {
 }
 
 /**
- * `admin.localhost` (dev) and `admin.fanzyx.com` (prod). Strips any port and
- * lower-cases before checking. Modern browsers resolve `*.localhost` → 127.0.0.1
- * without needing /etc/hosts changes.
+ * Hosts that serve the admin console (app/admin route tree).
+ *  - admin.localhost           → local dev (browsers resolve *.localhost
+ *                                 to 127.0.0.1 without /etc/hosts changes)
+ *  - admin.fanzyx.com          → prod
+ *  - admin.fanzyx.vercel.app   → Vercel prod alias
+ * Plus any Vercel preview URL of the form `admin-*.vercel.app`, so branch
+ * deploys automatically pick up the admin routing.
  */
+const ADMIN_HOSTS = new Set([
+  "admin.localhost",
+  "admin.fanzyx.com",
+  "admin.fanzyx.vercel.app",
+]);
+
 function isAdminHost(host: string | null): boolean {
   if (!host) return false;
   const h = host.split(":")[0].toLowerCase();
-  return h === "admin.localhost" || h.startsWith("admin.");
+  if (ADMIN_HOSTS.has(h)) return true;
+  // Vercel preview deployments: `admin-<branch>-<hash>.vercel.app`.
+  if (/^admin-[a-z0-9-]+\.vercel\.app$/.test(h)) return true;
+  return false;
 }
 
 export function middleware(req: NextRequest) {
