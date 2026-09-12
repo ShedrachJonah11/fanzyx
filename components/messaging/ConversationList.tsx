@@ -3,7 +3,18 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BellOff, Check, MoreHorizontal, Pin, Search, SquarePen } from "lucide-react";
+import {
+  BellOff,
+  Check,
+  ImageIcon,
+  Lock,
+  Mic,
+  MoreHorizontal,
+  Pin,
+  Search,
+  SquarePen,
+  Video,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { VerifiedBadge } from "@/components/ui/Badge";
 import { Skeleton, SkeletonCircle } from "@/components/ui/Skeleton";
@@ -13,7 +24,11 @@ import { ConversationMenu } from "./ConversationMenu";
 import { useMessagingStore } from "@/services/stores/messaging";
 import { messages as messagesApi } from "@/services/modules/messages";
 import { ApiError } from "@/services/apiClient";
-import type { ConversationFilter, ConversationOut } from "@/services/dtos";
+import type {
+  ConversationFilter,
+  ConversationOut,
+  MessageOut,
+} from "@/services/dtos";
 import { cn, timeAgo } from "@/lib/utils";
 
 const BRAND_GRADIENT =
@@ -230,11 +245,7 @@ export function ConversationList({ basePath, activeConvId }: Props) {
               const isActive = conv.id === activeConvId;
               const online = presenceByUser[conv.other.id]?.online;
               const name = conv.other.displayName || conv.other.username;
-              const preview = conv.lastMessage?.deletedAt
-                ? "Message deleted"
-                : conv.lastMessage?.locked
-                ? conv.lastMessage.previewBody || "🔒 Paid message"
-                : conv.lastMessage?.body || "New attachment";
+              const preview = <PreviewLine msg={conv.lastMessage} />;
               return (
                 <li
                   key={conv.id}
@@ -280,16 +291,16 @@ export function ConversationList({ basePath, activeConvId }: Props) {
                         ) : null}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <p
+                        <div
                           className={cn(
-                            "text-[12px] truncate flex-1",
+                            "flex items-center gap-1.5 min-w-0 flex-1 text-[12px]",
                             conv.unreadCount > 0
                               ? "text-white/85 font-medium"
                               : "text-white/55"
                           )}
                         >
                           {preview}
-                        </p>
+                        </div>
                         {conv.unreadCount > 0 ? (
                           <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-gradient-brand text-white text-[10px] font-bold on-media shrink-0">
                             {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
@@ -316,4 +327,51 @@ export function ConversationList({ basePath, activeConvId }: Props) {
       ) : null}
     </div>
   );
+}
+
+/**
+ * Row preview: renders an attachment-kind icon (image / video / mic) with
+ * the body text adjacent when present. If the message has attachments
+ * only (no text), just the icon is shown.
+ */
+function PreviewLine({ msg }: { msg: MessageOut | null }) {
+  if (!msg) {
+    return (
+      <span className="truncate text-white/45">No messages yet</span>
+    );
+  }
+
+  if (msg.deletedAt) {
+    return <span className="truncate italic">Message deleted</span>;
+  }
+
+  if (msg.locked) {
+    return (
+      <>
+        <Lock className="size-3.5 shrink-0" aria-hidden />
+        {msg.previewBody ? (
+          <span className="truncate">{msg.previewBody}</span>
+        ) : (
+          <span className="truncate">Paid message</span>
+        )}
+      </>
+    );
+  }
+
+  const atts = msg.attachments ?? [];
+  const body = msg.body?.trim() ?? "";
+  const hasBody = body.length > 0;
+
+  if (atts.length > 0) {
+    const kind = atts[0].kind;
+    const Icon = kind === "video" ? Video : kind === "audio" ? Mic : ImageIcon;
+    return (
+      <>
+        <Icon className="size-3.5 shrink-0" aria-label={kind} />
+        {hasBody ? <span className="truncate">{body}</span> : null}
+      </>
+    );
+  }
+
+  return <span className="truncate">{hasBody ? body : ""}</span>;
 }

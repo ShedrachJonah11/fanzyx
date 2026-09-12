@@ -37,8 +37,18 @@ export function MessagesShell({ basePath, variant = "creator", children }: Props
         <StartConversationRedirect basePath={basePath} />
       </Suspense>
       {/* Cancel the shell's padding on all sides so messaging fills its slot
-          edge-to-edge on both mobile and desktop. */}
-      <div className="-mx-4 sm:-mx-6 lg:-mx-8 -my-6 lg:-my-8 -mb-24 lg:-mb-8 flex h-[calc(100dvh-4rem)] lg:h-[100dvh] min-h-[520px]">
+          edge-to-edge on both mobile and desktop. When we're in a specific
+          thread on mobile, the shell hides its top-bar + bottom-nav — so we
+          reclaim the full viewport and drop the negative bottom margin
+          (which was there to cancel the bottom-nav gutter). */}
+      <div
+        className={cn(
+          "-mx-4 sm:-mx-6 lg:-mx-8 -my-6 lg:-my-8 lg:-mb-8 flex min-h-[520px]",
+          inThread
+            ? "h-[100dvh] mb-0"
+            : "h-[calc(100dvh-4rem)] -mb-24 lg:h-[100dvh]"
+        )}
+      >
         {/* Conversation list */}
         <aside
           className={cn(

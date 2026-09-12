@@ -164,6 +164,18 @@ export function DashboardShell({
     Object.values(s.conversations).reduce((n, c) => n + (c.unreadCount || 0), 0)
   );
 
+  /**
+   * Hide the mobile top-bar + bottom-nav when the user is inside a specific
+   * message thread — the thread has its own header + composer and needs the
+   * full viewport (the fixed bottom nav would otherwise overlay the
+   * composer). Matches /messages/{id} and /dashboard/messages/{id}.
+   */
+  const inMessageThread = !!(
+    pathname &&
+    /^\/(dashboard\/)?messages\/[^/]+/.test(pathname)
+  );
+  const hideMobileChrome = inMessageThread;
+
   const rawGroups =
     variant === "creator" ? buildCreatorNav(usernameHandle) : fanNav;
   const messagesHref =
@@ -267,8 +279,12 @@ export function DashboardShell({
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Top bar — mobile only */}
-        <header className="lg:hidden sticky top-0 z-30 border-b border-white/[0.06] bg-[#07070A]/70 backdrop-blur-md">
+        {/* Top bar — mobile only. Not rendered inside a message thread so
+            the ThreadView's own header owns the full viewport. */}
+        {hideMobileChrome ? null : (
+        <header
+          className="lg:hidden sticky top-0 z-30 border-b border-white/[0.06] bg-[#07070A]/70 backdrop-blur-md"
+        >
           <div className="flex items-center justify-between h-16 px-4 sm:px-6">
             <div className="flex items-center gap-3">
               <button
@@ -303,9 +319,16 @@ export function DashboardShell({
             </div>
           </div>
         </header>
+        )}
 
-        {/* Content */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8 overflow-x-clip">
+        {/* Content — drop the mobile bottom padding when the bottom nav is
+            hidden (message thread) so the composer sits flush with the edge. */}
+        <main
+          className={cn(
+            "flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:pb-8 overflow-x-clip",
+            hideMobileChrome ? "pb-0" : "pb-24"
+          )}
+        >
           <PageTransition>
             {(title || action) && (
               <div className="flex items-start sm:items-center justify-between gap-4 flex-col sm:flex-row mb-6">
@@ -326,8 +349,12 @@ export function DashboardShell({
           </PageTransition>
         </main>
 
-        {/* Mobile bottom nav — top 5 flat items */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.06] bg-[#0A0A0F]/90 backdrop-blur-xl">
+        {/* Mobile bottom nav — top 5 flat items. Not rendered in message
+            threads so the composer isn't overlaid. */}
+        {hideMobileChrome ? null : (
+        <nav
+          className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-white/[0.06] bg-[#0A0A0F]/90 backdrop-blur-xl"
+        >
           <div className="grid grid-cols-5">
             {flat.slice(0, 5).map((item) => {
               const active = isActive(pathname, item.href);
@@ -355,6 +382,7 @@ export function DashboardShell({
             })}
           </div>
         </nav>
+        )}
 
         {/* Mobile drawer */}
         {mobileOpen ? (

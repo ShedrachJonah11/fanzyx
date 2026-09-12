@@ -578,3 +578,18 @@ html.light [data-sonner-toast] [data-close-button]:hover {
   background: rgba(10, 8, 20, 0.12) !important;
   color: rgba(10, 8, 20, 1) !important;
 }
+
+/* -----------------------------------------------------------
+   iOS Safari zoom-on-focus fix.
+   Mobile Safari auto-zooms into any focused text input whose
+   font-size is < 16px. Every input in the app uses 14px for
+   visual density, so we bump min-font-size on small viewports.
+   Checkboxes/radios excluded — they don't render text.
+----------------------------------------------------------- */
+@media screen and (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

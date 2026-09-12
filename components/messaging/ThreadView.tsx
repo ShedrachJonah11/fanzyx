@@ -403,10 +403,11 @@ function MessageBubble({
     const videoCount = attachments.filter((a) => a.kind === "video").length;
     const hasCounts = imageCount + videoCount > 0;
     return (
-      <div className="flex flex-col max-w-[75%] gap-1 items-start self-start">
-        <div className="w-[300px] rounded-[16px] rounded-bl-sm hairline bg-white/[0.04] overflow-hidden">
-          {/* Hero: centered price-in-lock over a soft petal backdrop */}
-          <div className="relative aspect-[4/3] w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
+      <div className="flex flex-col w-full max-w-[85%] sm:max-w-[75%] gap-1 items-start self-start">
+        <div className="w-full max-w-[300px] rounded-[16px] rounded-bl-sm hairline bg-white/[0.04] overflow-hidden">
+          {/* Hero: centered price-in-lock over a soft petal backdrop.
+              Shorter aspect on mobile so the card doesn't dominate the viewport. */}
+          <div className="relative aspect-[16/10] sm:aspect-[4/3] w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
             <svg
               aria-hidden
               viewBox="0 0 200 150"
@@ -419,11 +420,11 @@ function MessageBubble({
             </svg>
             <div className="relative flex items-center justify-center">
               <Lock
-                className="size-16 text-white/50"
+                className="size-12 sm:size-14 text-white/50"
                 strokeWidth={1.25}
                 aria-hidden
               />
-              <span className="absolute mt-2 text-[11px] font-bold text-white/80 tabular-nums">
+              <span className="absolute mt-1.5 text-[10px] font-bold text-white/80 tabular-nums">
                 {priceLabel}
               </span>
             </div>
