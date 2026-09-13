@@ -224,15 +224,17 @@ export function ThreadView({ convId, backPath }: Props) {
   const peerName = conv?.other.displayName || conv?.other.username || "";
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Header — clear the iPhone dynamic island / notch. Uses the
-          reported safe-area inset when available, otherwise falls back to
-          a generous 3rem so the header never tucks under the island. */}
+    // Mobile: `fixed inset-0` anchors the thread to the exact visible
+    // viewport, bypassing any ambient padding from the shell/providers
+    // that was showing up as a black band above the header. Desktop keeps
+    // the normal flex-in-flow so the ThreadView still sits inside the
+    // MessagesShell's right pane next to the conversation list.
+    <div className="fixed inset-0 flex flex-col bg-[#07070A] lg:static lg:inset-auto lg:h-full min-h-0 z-10 lg:z-auto">
+      {/* Header — clears the iPhone dynamic island via safe-area-inset-top. */}
       <div
         className="flex items-center gap-3 px-3 pb-3 border-b border-white/[0.08] shrink-0"
         style={{
-          paddingTop:
-            "max(3rem, calc(env(safe-area-inset-top) + 0.5rem))",
+          paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)",
         }}
       >
         <Link
